@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>성역 관리 시스템</title>
+    <style>
+        :root { --bg-dark: #0f1419; --panel-dark: rgba(30, 39, 46, 0.5); --accent-gold: #e0cdab; --btn-blue: #2980b9; --btn-red: #c0392b; }
+        body { background-color: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Malgun Gothic', sans-serif; }
+        
+        #app-container { 
+            width: 400px; height: 620px; 
+            background-color: var(--bg-dark); 
+            border: 2px solid var(--accent-gold); 
+            display: flex; flex-direction: column; 
+            overflow: hidden; position: relative; 
+            box-shadow: 0 0 30px rgba(0,0,0,0.8); 
+        }
+
+        .tabs { display: flex; background: rgba(0,0,0,0.8); z-index: 10; }
+        .tab-btn { flex: 1; padding: 15px; border: none; background: none; color: #7f8c8d; cursor: pointer; font-weight: bold; }
+        .tab-btn.active { color: var(--accent-gold); background: var(--panel-dark); border-bottom: 2px solid var(--accent-gold); }
+
+        .main-content { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; 
+            padding-top: 30px; background-size: cover; background-position: center; 
+            background-repeat: no-repeat; transition: background 0.5s ease;
+        }
+        /* 배경이 더 잘 보이도록 그라데이션 투명도를 낮췄습니다 (0.75 -> 0.4) */
+        .bg-ludra { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_ludra.png'); }
+        .bg-chimsik { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_main.png'); }
+
+        h2 { color: var(--accent-gold); margin: 0 0 20px 0; font-size: 24px; text-shadow: 2px 2px 8px black; }
+
+        /* 입력창 투명도 조절 */
+        input { 
+            width: 250px; padding: 12px; background: rgba(0, 0, 0, 0.6); 
+            border: 1px solid var(--accent-gold); color: white; text-align: center; 
+            font-size: 16px; margin-bottom: 10px; border-radius: 4px; outline: none;
+        }
+        input:focus { border-color: #fff; box-shadow: 0 0 10px var(--accent-gold); }
+
+        .action-btn { width: 275px; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        .action-btn:hover { filter: brightness(1.2); }
+        .btn-cal { background: rgba(52, 73, 94, 0.8); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+        .btn-search { background: var(--btn-blue); opacity: 0.9; }
+        .btn-submit { background: var(--btn-red); opacity: 0.9; }
+
+        /* 결과 창 투명도 조절 */
+        #result-display { 
+            width: 320px; height: 110px; margin-top: 20px; 
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(224, 205, 171, 0.3); 
+            border-radius: 5px; display: flex; align-items: center; justify-content: center; 
+            text-align: center; font-size: 14px; line-height: 1.6; padding: 10px; color: white; white-space: pre-wrap; 
+        }
+
+        #cal-modal { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(0,0,0,0.95); border: 2px solid var(--accent-gold); z-index: 100; padding: 15px; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; margin-top: 10px; color: white; }
+        .cal-day { padding: 8px 0; cursor: pointer; border-radius: 3px; font-size: 12px; }
+        .cal-day:hover { background: var(--accent-gold); color: black; }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="tabs">
+        <button id="btn-ludra" class="tab-btn active" onclick="switchTab('ludra', 2700)">루드라</button>
+        <button id="btn-chimsik" class="tab-btn" onclick="switchTab('chimsik', 3500)">침식된</button>
+    </div>
+
+    <div id="main-area" class="main-content bg-ludra">
+        <h2 id="title">⚔ 루드라 성역</h2>
+        <input type="text" id="char-name" placeholder="캐릭터명 입력 후 엔터" onkeypress="if(event.keyCode==13) fetchData()">
+        <button class="action-btn btn-cal" onclick="toggleCal()">📅 날짜 선택</button>
+        <div id="date-text" style="color: var(--accent-gold); margin: 5px 0; font-weight: bold; text-shadow: 1px 1px 2px black;">날짜: 2026-04-17</div>
+        <button class="action-btn btn-search" onclick="fetchData()">정보 조회</button>
+        <button class="action-btn btn-submit" onclick="submitData()">참여 체크</button>
+        <div id="result-display">캐릭터명을 조회해 주세요.</div>
+    </div>
+
+    <div id="cal-modal">
+        <div style="display:flex; justify-content: space-between; align-items: center; color: white;">
+            <button onclick="moveMonth(-1)">&lt;</button>
+            <b id="cal-title">2026.04</b>
+            <button onclick="moveMonth(1)">&gt;</button>
+        </div>
+        <div class="cal-grid" id="cal-body"></div>
+        <button onclick="toggleCal()" style="width:100%; margin-top:10px; background:#333; color:white; border:none; padding:8px; cursor:pointer;">닫기</button>
+    </div>
+</div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbxBowBB26paLpCTUQMYS8pPfMqK1Cq6xhWf-0PmzoTj0kzhsPUxvKWG7hdUekXcDjmllg/exec";
+    const LUDRA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScrzEVn9LGM0ZYYe0c4zb872cr0jiPv_nzRPbvEe6fPRouo8g/formResponse";
+    const CHIMSIK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMCK4YAeyg8el3ALNaALCCW3-li_fpWPebu8ICpDDQkgD8zg/formResponse";
+
+    let currentTab = "루드라";
+    let currentMinLv = 2700; 
+    let selectedChar = null;
+    let targetDate = new Date();
+    let viewDate = new Date();
+
+    function switchTab(type, lv) {
+        currentTab = (type === 'ludra' ? "루드라" : "침식된");
+        currentMinLv = lv; 
+        const area = document.getElementById('main-area');
+        const title = document.getElementById('title');
+        area.className = "main-content " + (type === 'ludra' ? "bg-ludra" : "bg-chimsik");
+        title.innerText = (type === 'ludra' ? "⚔ 루드라 성역" : "🔥 침식된 성역");
+        document.getElementById('btn-ludra').classList.toggle('active', type === 'ludra');
+        document.getElementById('btn-chimsik').classList.toggle('active', type === 'chimsik');
+        document.getElementById('result-display').innerText = "캐릭터명을 조회해 주세요.";
+        selectedChar = null;
+    }
+
+    async function fetchData() {
+        const inputName = document.getElementById('char-name').value.trim();
+        if (!inputName) return alert("이름을 입력하세요.");
+        const resDiv = document.getElementById('result-display');
+        resDiv.innerText = "데이터를 불러오는 중...";
+
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            const user = data.find(row => String(row[0]).trim() === inputName);
+
+            if (user) {
+                let powerVal = String(user[4] || "0");
+                let displayPower = powerVal.toUpperCase().includes('K') ? powerVal : powerVal + "K";
+                const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
+                const isPass = charLv >= currentMinLv;
+                
+                if(isPass) {
+                    selectedChar = { name: user[0], class: user[1], power: displayPower, lv: charLv };
+                    resDiv.style.color = "#4da6ff";
+                    resDiv.innerText = `▶ 조회 성공 ◀\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
+                } else {
+                    selectedChar = null;
+                    resDiv.style.color = "#ff4d4d";
+                    resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${currentMinLv}레벨 필요\n(현재 레벨: ${user[5]})`;
+                }
+            } else {
+                selectedChar = null;
+                resDiv.innerText = "정보가 없습니다.";
+                resDiv.style.color = "#ff5c5c";
+            }
+        } catch (e) { resDiv.innerText = "데이터 로드 실패"; }
+    }
+
+    async function submitData() {
+        if (!selectedChar) return alert("신청 가능한 캐릭터가 아닙니다.");
+        const targetFormUrl = (currentTab === "루드라") ? LUDRA_FORM_URL : CHIMSIK_FORM_URL;
+        const formData = new FormData();
+        formData.append("entry.1885401070", selectedChar.name);
+        formData.append("entry.1597772281", selectedChar.class || "미정");
+        formData.append("entry.2119139776", selectedChar.power);
+        formData.append("entry.1568093931", formatDate(targetDate));
+        formData.append("entry.811558296", currentTab);
+
+        try {
+            await fetch(targetFormUrl, { method: "POST", mode: "no-cors", body: formData });
+            alert(`${selectedChar.name}님 [${currentTab}] 신청 완료!`);
+        } catch (e) { alert("전송 오류"); }
+    }
+
+    function formatDate(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0'); }
+    function toggleCal() { const m = document.getElementById('cal-modal'); m.style.display = (m.style.display === 'block' ? 'none' : 'block'); if(m.style.display === 'block') renderCal(); }
+    function renderCal() {
+        const body = document.getElementById('cal-body');
+        const title = document.getElementById('cal-title');
+        body.innerHTML = '';
+        const y = viewDate.getFullYear(), m = viewDate.getMonth();
+        title.innerText = `${y}.${String(m+1).padStart(2, '0')}`;
+        ['일','월','화','수','목','금','토'].forEach(d => { const h = document.createElement('div'); h.innerText = d; h.style.color = '#aaa'; body.appendChild(h); });
+        const firstDay = new Date(y, m, 1).getDay();
+        const lastDate = new Date(y, m+1, 0).getDate();
+        for(let i=0; i<firstDay; i++) body.appendChild(document.createElement('div'));
+        for(let i=1; i<=lastDate; i++) {
+            const d = document.createElement('div'); d.innerText = i; d.className = 'cal-day';
+            d.onclick = () => { targetDate = new Date(y, m, i); document.getElementById('date-text').innerText = `날짜: ${formatDate(targetDate)}`; toggleCal(); };
+            body.appendChild(d);
+        }
+    }
+    function moveMonth(n) { viewDate.setMonth(viewDate.getMonth() + n); renderCal(); }
+</script>
+</body>
+</html>

@@ -114,39 +114,49 @@
     }
 
     async function fetchData() {
-        const inputName = document.getElementById('char-name').value.trim();
-        if (!inputName) return alert("이름을 입력하세요.");
-        const resDiv = document.getElementById('result-display');
-        resDiv.innerText = "데이터를 불러오는 중...";
+    const inputName = document.getElementById('char-name').value.trim();
+    if (!inputName) return alert("이름을 입력하세요.");
+    const resDiv = document.getElementById('result-display');
+    resDiv.innerText = "데이터를 불러오는 중...";
 
-        try {
-            const response = await fetch(API_URL);
-            const data = await response.json();
-            const user = data.find(row => String(row[0]).trim() === inputName);
+    try {
+        const response = await fetch(API_URL);
+        const data = await response.json();
+        const user = data.find(row => String(row[0]).trim() === inputName);
 
-            if (user) {
-                let powerVal = String(user[4] || "0");
-                let displayPower = powerVal.toUpperCase().includes('K') ? powerVal : powerVal + "K";
-                const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
-                const isPass = charLv >= currentMinLv;
-                
-                if(isPass) {
-                    selectedChar = { name: user[0], class: user[1], power: displayPower, lv: charLv };
-                    resDiv.style.color = "#4da6ff";
-                    resDiv.innerText = `▶ 조회 성공 ◀\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
-                } else {
-                    selectedChar = null;
-                    resDiv.style.color = "#ff4d4d";
-                    resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${currentMinLv}레벨 필요\n(현재 레벨: ${user[5]})`;
-                }
+        if (user) {
+            let powerVal = String(user[4] || "0");
+            let displayPower = powerVal.toUpperCase().includes('K') ? powerVal : powerVal + "K";
+            const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
+            
+            // 7번째 열(인덱스 6)이 '성역2클리어' 여부라고 가정합니다.
+            const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
+            
+            // 조건 설정
+            const isLvPass = charLv >= currentMinLv;
+            const isConditionPass = (currentTab === "침식된") ? (isLvPass && isCleared) : isLvPass;
+
+            if(isConditionPass) {
+                selectedChar = { name: user[0], class: user[1], power: displayPower, lv: charLv };
+                resDiv.style.color = "#4da6ff";
+                resDiv.innerText = `▶ 조회 성공 ◀\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
             } else {
                 selectedChar = null;
-                resDiv.innerText = "정보가 없습니다.";
-                resDiv.style.color = "#ff5c5c";
+                resDiv.style.color = "#ff4d4d";
+                
+                if (currentTab === "침식된" && !isCleared) {
+                    resDiv.innerText = `❌ 성역2 클리어 필요 ❌\n'O' 표시된 인원만 신청 가능합니다.`;
+                } else {
+                    resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${currentMinLv}레벨 필요\n(현재 레벨: ${user[5]})`;
+                }
             }
-        } catch (e) { resDiv.innerText = "데이터 로드 실패"; }
-    }
-
+        } else {
+            selectedChar = null;
+            resDiv.innerText = "정보가 없습니다.";
+            resDiv.style.color = "#ff5c5c";
+        }
+    } catch (e) { resDiv.innerText = "데이터 로드 실패"; }
+}
     async function submitData() {
         if (!selectedChar) return alert("신청 가능한 캐릭터가 아닙니다.");
         const targetFormUrl = (currentTab === "루드라") ? LUDRA_FORM_URL : CHIMSIK_FORM_URL;

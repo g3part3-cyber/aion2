@@ -7,7 +7,7 @@
     <style>
         :root { --bg-dark: #0f1419; --panel-dark: rgba(30, 39, 46, 0.5); --accent-gold: #e0cdab; --btn-blue: #2980b9; --btn-red: #c0392b; }
         body { background-color: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Malgun Gothic', sans-serif; }
-        
+
         #app-container { 
             width: 400px; height: 620px; 
             background-color: var(--bg-dark); 
@@ -18,7 +18,7 @@
         }
 
         .tabs { display: flex; background: rgba(0,0,0,0.8); z-index: 10; }
-        .tab-btn { flex: 1; padding: 15px; border: none; background: none; color: #7f8c8d; cursor: pointer; font-weight: bold; }
+        .tab-btn { flex: 1; padding: 15px 8px; border: none; background: none; color: #7f8c8d; cursor: pointer; font-weight: bold; font-size: 14px; }
         .tab-btn.active { color: var(--accent-gold); background: var(--panel-dark); border-bottom: 2px solid var(--accent-gold); }
 
         .main-content { 
@@ -26,13 +26,12 @@
             padding-top: 30px; background-size: cover; background-position: center; 
             background-repeat: no-repeat; transition: background 0.5s ease;
         }
-        /* 배경이 더 잘 보이도록 그라데이션 투명도를 낮췄습니다 (0.75 -> 0.4) */
         .bg-ludra { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_ludra.png'); }
         .bg-chimsik { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_main.png'); }
+        .bg-muspell { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_muspell.png'); }
 
         h2 { color: var(--accent-gold); margin: 0 0 20px 0; font-size: 24px; text-shadow: 2px 2px 8px black; }
 
-        /* 입력창 투명도 조절 */
         input { 
             width: 250px; padding: 12px; background: rgba(0, 0, 0, 0.6); 
             border: 1px solid var(--accent-gold); color: white; text-align: center; 
@@ -46,7 +45,6 @@
         .btn-search { background: var(--btn-blue); opacity: 0.9; }
         .btn-submit { background: var(--btn-red); opacity: 0.9; }
 
-        /* 결과 창 투명도 조절 */
         #result-display { 
             width: 320px; height: 110px; margin-top: 20px; 
             background: rgba(0,0,0,0.5); border: 1px solid rgba(224, 205, 171, 0.3); 
@@ -66,6 +64,7 @@
     <div class="tabs">
         <button id="btn-ludra" class="tab-btn active" onclick="switchTab('ludra', 2700)">루드라</button>
         <button id="btn-chimsik" class="tab-btn" onclick="switchTab('chimsik', 3500)">침식된</button>
+        <button id="btn-muspell" class="tab-btn" onclick="switchTab('muspell', 4500)">무스펠</button>
     </div>
 
     <div id="main-area" class="main-content bg-ludra">
@@ -93,6 +92,7 @@
     const API_URL = "https://script.google.com/macros/s/AKfycbxBowBB26paLpCTUQMYS8pPfMqK1Cq6xhWf-0PmzoTj0kzhsPUxvKWG7hdUekXcDjmllg/exec";
     const LUDRA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScrzEVn9LGM0ZYYe0c4zb872cr0jiPv_nzRPbvEe6fPRouo8g/formResponse";
     const CHIMSIK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMCK4YAeyg8el3ALNaALCCW3-li_fpWPebu8ICpDDQkgD8zg/formResponse";
+    const MUSPELL_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeVxOs4bvl6XB9ijHETtGTfi2tjWntBT1Db1Nzyji1hg1jwBA/formResponse";
 
     let currentTab = "루드라";
     let currentMinLv = 2700; 
@@ -101,65 +101,71 @@
     let viewDate = new Date();
 
     function switchTab(type, lv) {
-        currentTab = (type === 'ludra' ? "루드라" : "침식된");
-        currentMinLv = lv; 
-        const area = document.getElementById('main-area');
-        const title = document.getElementById('title');
-        area.className = "main-content " + (type === 'ludra' ? "bg-ludra" : "bg-chimsik");
-        title.innerText = (type === 'ludra' ? "⚔ 루드라 성역" : "🔥 침식된 성역");
-        document.getElementById('btn-ludra').classList.toggle('active', type === 'ludra');
-        document.getElementById('btn-chimsik').classList.toggle('active', type === 'chimsik');
+        const map = { ludra: "루드라", chimsik: "침식된", muspell: "무스펠" };
+        const titleMap = { ludra: "⚔ 루드라 성역", chimsik: "🔥 침식된 성역", muspell: "🔥 무스펠 성역" };
+        const bgMap = { ludra: "bg-ludra", chimsik: "bg-chimsik", muspell: "bg-muspell" };
+        currentTab = map[type];
+        currentMinLv = lv;
+        document.getElementById('main-area').className = "main-content " + bgMap[type];
+        document.getElementById('title').innerText = titleMap[type];
+        ['ludra','chimsik','muspell'].forEach(t => {
+            document.getElementById('btn-' + t).classList.toggle('active', t === type);
+        });
         document.getElementById('result-display').innerText = "캐릭터명을 조회해 주세요.";
+        document.getElementById('result-display').style.color = "white";
         selectedChar = null;
     }
 
     async function fetchData() {
-    const inputName = document.getElementById('char-name').value.trim();
-    if (!inputName) return alert("이름을 입력하세요.");
-    const resDiv = document.getElementById('result-display');
-    resDiv.innerText = "데이터를 불러오는 중...";
+        const inputName = document.getElementById('char-name').value.trim();
+        if (!inputName) return alert("이름을 입력하세요.");
+        const resDiv = document.getElementById('result-display');
+        resDiv.innerText = "데이터를 불러오는 중...";
 
-    try {
-        const response = await fetch(API_URL);
-        const data = await response.json();
-        const user = data.find(row => String(row[0]).trim() === inputName);
+        try {
+            const response = await fetch(API_URL);
+            const data = await response.json();
+            const user = data.find(row => String(row[0]).trim() === inputName);
 
-        if (user) {
-            let powerVal = String(user[4] || "0");
-            let displayPower = powerVal.toUpperCase().includes('K') ? powerVal : powerVal + "K";
-            const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
-            
-            // 7번째 열(인덱스 6)이 '성역2클리어' 여부라고 가정합니다.
-            const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
-            
-            // 조건 설정
-            const isLvPass = charLv >= currentMinLv;
-            const isConditionPass = (currentTab === "침식된") ? (isLvPass && isCleared) : isLvPass;
+            if (user) {
+                let powerVal = String(user[4] || "0");
+                let displayPower = powerVal.toUpperCase().includes('K') ? powerVal : powerVal + "K";
+                const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
+                const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
+                const isLvPass = charLv >= currentMinLv;
 
-            if(isConditionPass) {
-                selectedChar = { name: user[0], class: user[1], power: displayPower, lv: charLv };
-                resDiv.style.color = "#4da6ff";
-                resDiv.innerText = `▶ 조회 성공 ◀\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
+                let isConditionPass;
+                if (currentTab === "침식된") isConditionPass = isLvPass && isCleared;
+                else isConditionPass = isLvPass; // 루드라, 무스펠 (레벨만 체크)
+
+                if (isConditionPass) {
+                    selectedChar = { name: user[0], class: user[1], power: displayPower, lv: charLv };
+                    resDiv.style.color = "#4da6ff";
+                    resDiv.innerText = `▶ 조회 성공 ◀\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
+                } else {
+                    selectedChar = null;
+                    resDiv.style.color = "#ff4d4d";
+                    if (currentTab === "침식된" && !isCleared) {
+                        resDiv.innerText = `❌ 성역2 클리어 필요 ❌\n'O' 표시된 인원만 신청 가능합니다.`;
+                    } else {
+                        resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${currentMinLv}레벨 필요\n(현재 레벨: ${user[5]})`;
+                    }
+                }
             } else {
                 selectedChar = null;
-                resDiv.style.color = "#ff4d4d";
-                
-                if (currentTab === "침식된" && !isCleared) {
-                    resDiv.innerText = `❌ 성역2 클리어 필요 ❌\n'O' 표시된 인원만 신청 가능합니다.`;
-                } else {
-                    resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${currentMinLv}레벨 필요\n(현재 레벨: ${user[5]})`;
-                }
+                resDiv.innerText = "정보가 없습니다.";
+                resDiv.style.color = "#ff5c5c";
             }
-        } else {
-            selectedChar = null;
-            resDiv.innerText = "정보가 없습니다.";
-            resDiv.style.color = "#ff5c5c";
-        }
-    } catch (e) { resDiv.innerText = "데이터 로드 실패"; }
-}
+        } catch (e) { resDiv.innerText = "데이터 로드 실패"; }
+    }
+
     async function submitData() {
         if (!selectedChar) return alert("신청 가능한 캐릭터가 아닙니다.");
-        const targetFormUrl = (currentTab === "루드라") ? LUDRA_FORM_URL : CHIMSIK_FORM_URL;
+        let targetFormUrl;
+        if (currentTab === "루드라") targetFormUrl = LUDRA_FORM_URL;
+        else if (currentTab === "침식된") targetFormUrl = CHIMSIK_FORM_URL;
+        else targetFormUrl = MUSPELL_FORM_URL;
+
         const formData = new FormData();
         formData.append("entry.1885401070", selectedChar.name);
         formData.append("entry.1597772281", selectedChar.class || "미정");

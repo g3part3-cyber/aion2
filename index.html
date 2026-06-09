@@ -32,12 +32,12 @@
 
         h2 { color: var(--accent-gold); margin: 0 0 20px 0; font-size: 24px; text-shadow: 2px 2px 8px black; }
 
-        input { 
+        input, select { 
             width: 250px; padding: 12px; background: rgba(0, 0, 0, 0.6); 
             border: 1px solid var(--accent-gold); color: white; text-align: center; 
             font-size: 16px; margin-bottom: 10px; border-radius: 4px; outline: none;
         }
-        input:focus { border-color: #fff; box-shadow: 0 0 10px var(--accent-gold); }
+        input:focus, select:focus { border-color: #fff; box-shadow: 0 0 10px var(--accent-gold); }
 
         .action-btn { width: 275px; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
         .action-btn:hover { filter: brightness(1.2); }
@@ -64,14 +64,24 @@
     <div class="tabs">
         <button id="btn-ludra" class="tab-btn active" onclick="switchTab('ludra', 2700)">루드라</button>
         <button id="btn-chimsik" class="tab-btn" onclick="switchTab('chimsik', 3500)">침식된</button>
-        <button id="btn-muspell" class="tab-btn" onclick="switchTab('muspell', 4500)">무스펠</button>
+        <button id="btn-muspell" class="tab-btn" onclick="switchTab('muspell', 4300)">무스펠</button>
     </div>
 
     <div id="main-area" class="main-content bg-ludra">
         <h2 id="title">⚔ 루드라 성역</h2>
         <input type="text" id="char-name" placeholder="캐릭터명 입력 후 엔터" onkeypress="if(event.keyCode==13) fetchData()">
+        
+        <!-- 무스펠 전용 난이도 선택 (무스펠 탭에서만 보임) -->
+        <div id="diff-area" style="display: none; margin-bottom: 5px;">
+            <select id="difficulty" onchange="resetSelection()">
+                <option value="보통">난이도: 보통 (Lv 4300↑)</option>
+                <option value="어려움">난이도: 어려움 (Lv 4500↑)</option>
+            </select>
+        </div>
+
         <button class="action-btn btn-cal" onclick="toggleCal()">📅 날짜 선택</button>
-        <div id="date-text" style="color: var(--accent-gold); margin: 5px 0; font-weight: bold; text-shadow: 1px 1px 2px black;">날짜: 2026-04-17</div>
+        <div id="date-text" style="color: var(--accent-gold); margin: 5px 0; font-weight: bold; text-shadow: 1px 1px 2px black;">날짜: 설정 중...</div>
+        
         <button class="action-btn btn-search" onclick="fetchData()">정보 조회</button>
         <button class="action-btn btn-submit" onclick="submitData()">참여 체크</button>
         <div id="result-display">캐릭터명을 조회해 주세요.</div>
@@ -100,20 +110,30 @@
     let targetDate = new Date();
     let viewDate = new Date();
 
+    document.getElementById('date-text').innerText = `날짜: ${formatDate(targetDate)}`;
+
+    function resetSelection() {
+        selectedChar = null;
+        document.getElementById('result-display').innerText = "난이도가 변경되었습니다.\n다시 조회해 주세요.";
+        document.getElementById('result-display').style.color = "white";
+    }
+
     function switchTab(type, lv) {
         const map = { ludra: "루드라", chimsik: "침식된", muspell: "무스펠" };
         const titleMap = { ludra: "⚔ 루드라 성역", chimsik: "🔥 침식된 성역", muspell: "🔥 무스펠 성역" };
         const bgMap = { ludra: "bg-ludra", chimsik: "bg-chimsik", muspell: "bg-muspell" };
         currentTab = map[type];
         currentMinLv = lv;
+
         document.getElementById('main-area').className = "main-content " + bgMap[type];
         document.getElementById('title').innerText = titleMap[type];
         ['ludra','chimsik','muspell'].forEach(t => {
             document.getElementById('btn-' + t).classList.toggle('active', t === type);
         });
+
+        document.getElementById('diff-area').style.display = (type === 'muspell') ? 'block' : 'none';
+        resetSelection();
         document.getElementById('result-display').innerText = "캐릭터명을 조회해 주세요.";
-        document.getElementById('result-display').style.color = "white";
-        selectedChar = null;
     }
 
     async function fetchData() {
@@ -132,11 +152,16 @@
                 let displayPower = powerVal.toUpperCase().includes('K') ? powerVal : powerVal + "K";
                 const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
                 const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
-                const isLvPass = charLv >= currentMinLv;
 
-                let isConditionPass;
-                if (currentTab === "침식된") isConditionPass = isLvPass && isCleared;
-                else isConditionPass = isLvPass; // 루드라, 무스펠 (레벨만 체크)
+                // [난이도별 레벨 체크 로직]
+                let requiredLv = currentMinLv;
+                if (currentTab === "무스펠") {
+                    const diff = document.getElementById('difficulty').value;
+                    requiredLv = (diff === "어려움") ? 4500 : 4300;
+                }
+
+                const isLvPass = charLv >= requiredLv;
+                let isConditionPass = (currentTab === "침식된") ? (isLvPass && isCleared) : isLvPass;
 
                 if (isConditionPass) {
                     selectedChar = { name: user[0], class: user[1], power: displayPower, lv: charLv };
@@ -148,7 +173,7 @@
                     if (currentTab === "침식된" && !isCleared) {
                         resDiv.innerText = `❌ 성역2 클리어 필요 ❌\n'O' 표시된 인원만 신청 가능합니다.`;
                     } else {
-                        resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${currentMinLv}레벨 필요\n(현재 레벨: ${user[5]})`;
+                        resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${requiredLv}레벨 필요\n(현재 레벨: ${user[5]})`;
                     }
                 }
             } else {
@@ -161,21 +186,29 @@
 
     async function submitData() {
         if (!selectedChar) return alert("신청 가능한 캐릭터가 아닙니다.");
-        let targetFormUrl;
-        if (currentTab === "루드라") targetFormUrl = LUDRA_FORM_URL;
-        else if (currentTab === "침식된") targetFormUrl = CHIMSIK_FORM_URL;
-        else targetFormUrl = MUSPELL_FORM_URL;
+        let targetFormUrl = (currentTab === "루드라") ? LUDRA_FORM_URL : (currentTab === "침식된") ? CHIMSIK_FORM_URL : MUSPELL_FORM_URL;
 
         const formData = new FormData();
         formData.append("entry.1885401070", selectedChar.name);
         formData.append("entry.1597772281", selectedChar.class || "미정");
         formData.append("entry.2119139776", selectedChar.power);
-        formData.append("entry.1568093931", formatDate(targetDate));
         formData.append("entry.811558296", currentTab);
+
+        // 날짜 쪼개서 전송
+        formData.append("entry.1568093931_year", targetDate.getFullYear());
+        formData.append("entry.1568093931_month", String(targetDate.getMonth() + 1).padStart(2, '0'));
+        formData.append("entry.1568093931_day", String(targetDate.getDate()).padStart(2, '0'));
+
+        // 무스펠 난이도 전송 (⚠️ entry ID를 실제 값으로 수정 필요)
+        if (currentTab === "무스펠") {
+            const diffVal = document.getElementById('difficulty').value;
+            formData.append("entry.1144998178", diffVal); 
+        }
 
         try {
             await fetch(targetFormUrl, { method: "POST", mode: "no-cors", body: formData });
-            alert(`${selectedChar.name}님 [${currentTab}] 신청 완료!`);
+            const msgSuffix = currentTab === "무스펠" ? `[무스펠 - ${document.getElementById('difficulty').value}]` : `[${currentTab}]`;
+            alert(`${selectedChar.name}님 ${msgSuffix} 신청 완료!`);
         } catch (e) { alert("전송 오류"); }
     }
 

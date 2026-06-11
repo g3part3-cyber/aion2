@@ -40,6 +40,11 @@
         input:focus, select:focus { border-color: #fff; box-shadow: 0 0 10px var(--accent-gold); }
         select option { background: #222; color: white; }
 
+        /* 자동 상태 메시지 스타일 정의 */
+        .status-badge {
+            color: #ff9f43; font-weight: bold; font-size: 14px; margin-bottom: 8px; text-shadow: 1px 1px 2px black;
+        }
+
         .action-btn { width: 275px; padding: 10px; margin: 4px 0; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
         .action-btn:hover { filter: brightness(1.2); }
         .btn-cal { background: rgba(52, 73, 94, 0.8); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
@@ -80,6 +85,8 @@
                 <option value="11시이상">시간: 11시 이상</option>
             </select>
         </div>
+
+        <div id="try-area" class="status-badge" style="display: none;">ℹ️ 조회 시 클리어 기록에 따라 완숙/트라이 자동 판정</div>
 
         <div id="diff-area" style="display: none;">
             <select id="difficulty" onchange="resetSelection()">
@@ -141,6 +148,8 @@
         });
 
         document.getElementById('diff-area').style.display = (type === 'muspell') ? 'block' : 'none';
+        document.getElementById('try-area').style.display = (type === 'chimsik') ? 'block' : 'none';
+        
         document.getElementById('raid-time').selectedIndex = 0;
         
         resetSelection();
@@ -170,21 +179,30 @@
                     requiredLv = (diff === "어려움") ? 4500 : 4300;
                 }
 
-                const isLvPass = charLv >= requiredLv;
-                let isConditionPass = (currentTab === "침식된") ? (isLvPass && isCleared) : isLvPass;
+                // 💡 자동 판단 핵심 로직: 침식의 경우 3500레벨 이상만 되면 무조건 통과처리하되, 클리어 여부에 따라 내부 타입을 지정합니다.
+                if (charLv >= requiredLv) {
+                    selectedChar = { 
+                        name: user[0], 
+                        class: user[1], 
+                        power: displayPower, 
+                        lv: charLv,
+                        // 클리어 기록(O)이 있으면 "완숙", 없으면 자동으로 "트라이" 세팅
+                        type: (currentTab === "침식된") ? (isCleared ? "완숙" : "트라이") : null
+                    };
 
-                if (isConditionPass) {
-                    selectedChar = { name: user[0], class: user[1], power: displayPower, lv: charLv };
                     resDiv.style.color = "#4da6ff";
-                    resDiv.innerText = `▶ 조회 성공 ◀\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
+                    
+                    // 문구도 상태에 맞춰 자동으로 다르게 표기합니다.
+                    let successTitle = "▶ 조회 성공 ◀";
+                    if (currentTab === "침식된") {
+                        successTitle = isCleared ? "▶ 완숙 신청 가능 ◀" : "▶ 트라이 신청 가능 ◀";
+                    }
+                    
+                    resDiv.innerText = `${successTitle}\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
                 } else {
                     selectedChar = null;
                     resDiv.style.color = "#ff4d4d";
-                    if (currentTab === "침식된" && !isCleared) {
-                        resDiv.innerText = `❌ 성역2 클리어 필요 ❌\n'O' 표시된 인원만 신청 가능합니다.`;
-                    } else {
-                        resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${requiredLv}레벨 필요\n(현재 레벨: ${user[5]})`;
-                    }
+                    resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${requiredLv}레벨 필요\n(현재 레벨: ${user[5]})`;
                 }
             } else {
                 selectedChar = null;
@@ -204,29 +222,42 @@
         formData.append("entry.2119139776", selectedChar.power);
         formData.append("entry.811558296", currentTab);
 
-        // 날짜 데이터 쪼개서 전송
+        // 날짜 데이터 전송
         formData.append("entry.1568093931_year", targetDate.getFullYear());
         formData.append("entry.1568093931_month", String(targetDate.getMonth() + 1).padStart(2, '0'));
         formData.append("entry.1568093931_day", String(targetDate.getDate()).padStart(2, '0'));
 
-        // [수정 핵심] 탭에 맞춰 개별적인 시간 entry ID로 데이터를 주입합니다.
         const selectedTime = document.getElementById('raid-time').value;
+
         if (currentTab === "루드라") {
             formData.append("entry.343454175", selectedTime);
         } else if (currentTab === "침식된") {
+            // 1. 기존 참여가능 시간 컬럼 주소로 선택 시간 전송
             formData.append("entry.371015671", selectedTime);
+            
+            // 2. 💡 정보 조회 단계에서 자동 결정된 완숙/트라이 상태값을 새 객관식 ID로 전송
+            formData.append("entry.1920727946", selectedChar.type);
+            
         } else if (currentTab === "무스펠") {
             formData.append("entry.1081890562", selectedTime);
-            
-            // 무스펠일 때 난이도 값도 추가 전송
             const diffVal = document.getElementById('difficulty').value;
             formData.append("entry.1144998178", diffVal); 
         }
 
         try {
             await fetch(targetFormUrl, { method: "POST", mode: "no-cors", body: formData });
-            const msgSuffix = currentTab === "무스펠" ? `[무스펠 - ${document.getElementById('difficulty').value}]` : `[${currentTab}]`;
-            alert(`${selectedChar.name}님 ${msgSuffix} (${selectedTime}) 신청 완료!`);
+            
+            let alertMsg = `${selectedChar.name}님 `;
+            
+            if (currentTab === "침식된") {
+                alertMsg += `[침식 - ${selectedChar.type}] (${selectedTime}) 신청 완료!`;
+            } else if (currentTab === "무스펠") {
+                alertMsg += `[무스펠 - ${document.getElementById('difficulty').value}] (${selectedTime}) 신청 완료!`;
+            } else {
+                alertMsg += `[${currentTab}] (${selectedTime}) 신청 완료!`;
+            }
+            
+            alert(alertMsg);
         } catch (e) { alert("전송 오류"); }
     }
 

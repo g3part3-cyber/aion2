@@ -23,33 +23,34 @@
 
         .main-content { 
             flex: 1; display: flex; flex-direction: column; align-items: center; 
-            padding-top: 30px; background-size: cover; background-position: center; 
+            padding-top: 20px; background-size: cover; background-position: center; 
             background-repeat: no-repeat; transition: background 0.5s ease;
         }
         .bg-ludra { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_ludra.png'); }
         .bg-chimsik { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_main.png'); }
         .bg-muspell { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_muspell.png'); }
 
-        h2 { color: var(--accent-gold); margin: 0 0 20px 0; font-size: 24px; text-shadow: 2px 2px 8px black; }
+        h2 { color: var(--accent-gold); margin: 0 0 15px 0; font-size: 24px; text-shadow: 2px 2px 8px black; }
 
         input, select { 
-            width: 250px; padding: 12px; background: rgba(0, 0, 0, 0.6); 
+            width: 250px; padding: 10px; background: rgba(0, 0, 0, 0.6); 
             border: 1px solid var(--accent-gold); color: white; text-align: center; 
-            font-size: 16px; margin-bottom: 10px; border-radius: 4px; outline: none;
+            font-size: 15px; margin-bottom: 8px; border-radius: 4px; outline: none;
         }
         input:focus, select:focus { border-color: #fff; box-shadow: 0 0 10px var(--accent-gold); }
+        select option { background: #222; color: white; }
 
-        .action-btn { width: 275px; padding: 12px; margin: 5px 0; border: none; border-radius: 4px; font-size: 16px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
+        .action-btn { width: 275px; padding: 10px; margin: 4px 0; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
         .action-btn:hover { filter: brightness(1.2); }
         .btn-cal { background: rgba(52, 73, 94, 0.8); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
         .btn-search { background: var(--btn-blue); opacity: 0.9; }
         .btn-submit { background: var(--btn-red); opacity: 0.9; }
 
         #result-display { 
-            width: 320px; height: 110px; margin-top: 20px; 
+            width: 320px; height: 100px; margin-top: 15px; 
             background: rgba(0,0,0,0.5); border: 1px solid rgba(224, 205, 171, 0.3); 
             border-radius: 5px; display: flex; align-items: center; justify-content: center; 
-            text-align: center; font-size: 14px; line-height: 1.6; padding: 10px; color: white; white-space: pre-wrap; 
+            text-align: center; font-size: 14px; line-height: 1.5; padding: 8px; color: white; white-space: pre-wrap; 
         }
 
         #cal-modal { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(0,0,0,0.95); border: 2px solid var(--accent-gold); z-index: 100; padding: 15px; }
@@ -71,8 +72,16 @@
         <h2 id="title">⚔ 루드라 성역</h2>
         <input type="text" id="char-name" placeholder="캐릭터명 입력 후 엔터" onkeypress="if(event.keyCode==13) fetchData()">
         
-        <!-- 무스펠 전용 난이도 선택 (무스펠 탭에서만 보임) -->
-        <div id="diff-area" style="display: none; margin-bottom: 5px;">
+        <div id="time-area">
+            <select id="raid-time">
+                <option value="7시~8시">시간: 7시 ~ 8시</option>
+                <option value="8시~9시">시간: 8시 ~ 9시</option>
+                <option value="9시~10시">시간: 9시 ~ 10시</option>
+                <option value="11시이상">시간: 11시 이상</option>
+            </select>
+        </div>
+
+        <div id="diff-area" style="display: none;">
             <select id="difficulty" onchange="resetSelection()">
                 <option value="보통">난이도: 보통 (Lv 4300↑)</option>
                 <option value="어려움">난이도: 어려움 (Lv 4500↑)</option>
@@ -80,7 +89,7 @@
         </div>
 
         <button class="action-btn btn-cal" onclick="toggleCal()">📅 날짜 선택</button>
-        <div id="date-text" style="color: var(--accent-gold); margin: 5px 0; font-weight: bold; text-shadow: 1px 1px 2px black;">날짜: 설정 중...</div>
+        <div id="date-text" style="color: var(--accent-gold); margin: 3px 0; font-weight: bold; text-shadow: 1px 1px 2px black;">날짜: 설정 중...</div>
         
         <button class="action-btn btn-search" onclick="fetchData()">정보 조회</button>
         <button class="action-btn btn-submit" onclick="submitData()">참여 체크</button>
@@ -114,7 +123,7 @@
 
     function resetSelection() {
         selectedChar = null;
-        document.getElementById('result-display').innerText = "난이도가 변경되었습니다.\n다시 조회해 주세요.";
+        document.getElementById('result-display').innerText = "조건이 변경되었습니다.\n다시 조회해 주세요.";
         document.getElementById('result-display').style.color = "white";
     }
 
@@ -132,6 +141,8 @@
         });
 
         document.getElementById('diff-area').style.display = (type === 'muspell') ? 'block' : 'none';
+        document.getElementById('raid-time').selectedIndex = 0;
+        
         resetSelection();
         document.getElementById('result-display').innerText = "캐릭터명을 조회해 주세요.";
     }
@@ -153,7 +164,6 @@
                 const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
                 const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
 
-                // [난이도별 레벨 체크 로직]
                 let requiredLv = currentMinLv;
                 if (currentTab === "무스펠") {
                     const diff = document.getElementById('difficulty').value;
@@ -194,13 +204,21 @@
         formData.append("entry.2119139776", selectedChar.power);
         formData.append("entry.811558296", currentTab);
 
-        // 날짜 쪼개서 전송
+        // 날짜 데이터 쪼개서 전송
         formData.append("entry.1568093931_year", targetDate.getFullYear());
         formData.append("entry.1568093931_month", String(targetDate.getMonth() + 1).padStart(2, '0'));
         formData.append("entry.1568093931_day", String(targetDate.getDate()).padStart(2, '0'));
 
-        // 무스펠 난이도 전송 (⚠️ entry ID를 실제 값으로 수정 필요)
-        if (currentTab === "무스펠") {
+        // [수정 핵심] 탭에 맞춰 개별적인 시간 entry ID로 데이터를 주입합니다.
+        const selectedTime = document.getElementById('raid-time').value;
+        if (currentTab === "루드라") {
+            formData.append("entry.343454175", selectedTime);
+        } else if (currentTab === "침식된") {
+            formData.append("entry.371015671", selectedTime);
+        } else if (currentTab === "무스펠") {
+            formData.append("entry.1081890562", selectedTime);
+            
+            // 무스펠일 때 난이도 값도 추가 전송
             const diffVal = document.getElementById('difficulty').value;
             formData.append("entry.1144998178", diffVal); 
         }
@@ -208,7 +226,7 @@
         try {
             await fetch(targetFormUrl, { method: "POST", mode: "no-cors", body: formData });
             const msgSuffix = currentTab === "무스펠" ? `[무스펠 - ${document.getElementById('difficulty').value}]` : `[${currentTab}]`;
-            alert(`${selectedChar.name}님 ${msgSuffix} 신청 완료!`);
+            alert(`${selectedChar.name}님 ${msgSuffix} (${selectedTime}) 신청 완료!`);
         } catch (e) { alert("전송 오류"); }
     }
 

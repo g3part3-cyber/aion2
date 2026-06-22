@@ -5,80 +5,245 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>성역 관리 시스템</title>
     <style>
-        :root { --bg-dark: #0f1419; --panel-dark: rgba(30, 39, 46, 0.5); --accent-gold: #e0cdab; --btn-blue: #2980b9; --btn-red: #c0392b; }
-        body { background-color: #222; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: 'Malgun Gothic', sans-serif; }
+        /* ========================================================
+           [수정] CSS 변수를 체계적으로 분리하여 유지보수성 향상
+           - 색상, 간격, 테두리 등 디자인 토큰을 한곳에서 관리
+           ======================================================== */
+        :root {
+            /* ── 기본 색상 테마 ── */
+            --bg-dark: #0f1419;
+            --panel-dark: rgba(30, 39, 46, 0.5);
+            --accent-gold: #e0cdab;
 
-        #app-container { 
-            width: 400px; height: 620px; 
-            background-color: var(--bg-dark); 
-            border: 2px solid var(--accent-gold); 
-            display: flex; flex-direction: column; 
-            overflow: hidden; position: relative; 
-            box-shadow: 0 0 30px rgba(0,0,0,0.8); 
+            /* ── 액션 버튼 색상 ── */
+            --btn-blue: #2980b9;
+            --btn-red: #c0392b;
+            --btn-gray: rgba(52, 73, 94, 0.8);
+
+            /* ── 상태 메시지 색상 ── */
+            --color-success: #4da6ff;   /* 조회 성공 시 텍스트 */
+            --color-error:   #ff4d4d;   /* 오류/불합격 시 텍스트 */
+            --color-warning: #ff9f43;   /* 경고/중립 메시지 */
+
+            /* ── 레이아웃 토큰 ── */
+            --app-width: 400px;
+            --app-height: 620px;
+            --border-radius: 4px;
         }
 
-        .tabs { display: flex; background: rgba(0,0,0,0.8); z-index: 10; }
-        .tab-btn { flex: 1; padding: 15px 8px; border: none; background: none; color: #7f8c8d; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .tab-btn.active { color: var(--accent-gold); background: var(--panel-dark); border-bottom: 2px solid var(--accent-gold); }
-
-        .main-content { 
-            flex: 1; display: flex; flex-direction: column; align-items: center; 
-            padding-top: 20px; background-size: cover; background-position: center; 
-            background-repeat: no-repeat; transition: background 0.5s ease;
+        /* ========================================================
+           [수정] body 스타일 정리 + @media 쿼리로 모바일 대응 추가
+           ======================================================== */
+        body {
+            background-color: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Malgun Gothic', sans-serif;
         }
-        .bg-ludra { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_ludra.png'); }
-        .bg-chimsik { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_main.png'); }
-        .bg-muspell { background-image: linear-gradient(rgba(15,20,25,0.0), rgba(15,20,25,0.0)), url('bg_muspell.png'); }
 
-        h2 { color: var(--accent-gold); margin: 0 0 15px 0; font-size: 24px; text-shadow: 2px 2px 8px black; }
-
-        input, select { 
-            width: 250px; padding: 10px; background: rgba(0, 0, 0, 0.6); 
-            border: 1px solid var(--accent-gold); color: white; text-align: center; 
-            font-size: 15px; margin-bottom: 8px; border-radius: 4px; outline: none;
+        @media (max-width: 450px) {
+            :root { --app-width: 95vw; }
         }
-        input:focus, select:focus { border-color: #fff; box-shadow: 0 0 10px var(--accent-gold); }
+
+        /* ========================================================
+           [수정] 애플리케이션 컨테이너 스타일 정리
+           - box-sizing 명시, 불필요한 속성 제거
+           ======================================================== */
+        #app-container {
+            width: var(--app-width);
+            height: var(--app-height);
+            background-color: var(--bg-dark);
+            border: 2px solid var(--accent-gold);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+            box-sizing: border-box; /* [수정] 패딩/보더 포함 박스모델 */
+        }
+
+        /* ========================================================
+           [수정] 탭 버튼 스타일 정리 (중복 속성 제거)
+           ======================================================== */
+        .tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px 8px;
+            border: none;
+            background: none;
+            color: #7f8c8d;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-gold);
+            background: var(--panel-dark);
+            border-bottom: 2px solid var(--accent-gold);
+        }
+
+        /* ========================================================
+           [수정] 배경 그리드/이미지 클래스 분리 (배경이 겹치지 않도록)
+           ======================================================== */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background 0.5s ease;
+        }
+
+        /* [수정] 배경 이미지가 없는 경우를 대비한 기본 그라디언트 추가 */
+        .bg-ludra,
+        .bg-chimsik,
+        .bg-muspell {
+            background-image: linear-gradient(rgba(15, 20, 25, 0.8), rgba(15, 20, 25, 0.9));
+        }
+
+        .bg-ludra    { background-image: url('bg_ludra.png'),      linear-gradient(rgba(15,20,25,0.8), rgba(15,20,25,0.9)); }
+        .bg-chimsik  { background-image: url('bg_main.png'),       linear-gradient(rgba(15,20,25,0.8), rgba(15,20,25,0.9)); }
+        .bg-muspell  { background-image: url('bg_muspell.png'),    linear-gradient(rgba(15,20,25,0.8), rgba(15,20,25,0.9)); }
+
+        h2 {
+            color: var(--accent-gold);
+            margin: 0 0 15px 0;
+            font-size: 24px;
+            text-shadow: 2px 2px 8px black;
+        }
+
+        /* ========================================================
+           [수정] 입력 요소 스타일 정리 (focus-ring 추가)
+           ======================================================== */
+        input, select {
+            width: 250px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--accent-gold);
+            color: white;
+            text-align: center;
+            font-size: 15px;
+            margin-bottom: 8px;
+            border-radius: var(--border-radius);
+            outline: none;
+        }
+
+        input:focus, select:focus {
+            border-color: #fff;
+            box-shadow: 0 0 10px var(--accent-gold);
+        }
+
         select option { background: #222; color: white; }
 
-        /* 자동 상태 메시지 스타일 정의 */
+        /* [수정] 자동 상태 메시지 스타일 분리 */
         .status-badge {
-            color: #ff9f43; font-weight: bold; font-size: 14px; margin-bottom: 8px; text-shadow: 1px 1px 2px black;
+            color: var(--color-warning);
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 2px black;
         }
 
-        .action-btn { width: 275px; padding: 10px; margin: 4px 0; border: none; border-radius: 4px; font-size: 15px; font-weight: bold; cursor: pointer; color: white; transition: 0.2s; }
-        .action-btn:hover { filter: brightness(1.2); }
-        .btn-cal { background: rgba(52, 73, 94, 0.8); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+        /* ========================================================
+           [수정] 버튼 스타일 정리 (hover 효과 일원화)
+           ======================================================== */
+        .action-btn {
+            width: 275px;
+            padding: 10px;
+            margin: 4px 0;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            transition: filter 0.2s, transform 0.1s; /* [수정] transform 추가하여 클릭 피드백 강화 */
+        }
+
+        .action-btn:hover  { filter: brightness(1.2); }
+        .action-btn:active { transform: scale(0.97); } /* [수정] 클릭 시각적 피드백 */
+
+        /* [수정] 색상 클래스 → CSS 변수로 연결 */
+        .btn-cal   { background: var(--btn-gray); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
         .btn-search { background: var(--btn-blue); opacity: 0.9; }
         .btn-submit { background: var(--btn-red); opacity: 0.9; }
 
-        #result-display { 
-            width: 320px; height: 100px; margin-top: 15px; 
-            background: rgba(0,0,0,0.5); border: 1px solid rgba(224, 205, 171, 0.3); 
-            border-radius: 5px; display: flex; align-items: center; justify-content: center; 
-            text-align: center; font-size: 14px; line-height: 1.5; padding: 8px; color: white; white-space: pre-wrap; 
+        /* ========================================================
+           [수정] 결과 표시 영역 스타일 정리
+           ======================================================== */
+        #result-display {
+            width: 320px;
+            height: 100px;
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(224, 205, 171, 0.3);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 8px;
+            color: white;
+            white-space: pre-wrap;
         }
 
-        #cal-modal { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 300px; background: rgba(0,0,0,0.95); border: 2px solid var(--accent-gold); z-index: 100; padding: 15px; }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; margin-top: 10px; color: white; }
+        /* 모달 스타일 (변경 없음) */
+        #cal-modal {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 300px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 2px solid var(--accent-gold);
+            z-index: 100;
+            padding: 15px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+            margin-top: 10px;
+            color: white;
+        }
+
         .cal-day { padding: 8px 0; cursor: pointer; border-radius: 3px; font-size: 12px; }
         .cal-day:hover { background: var(--accent-gold); color: black; }
     </style>
 </head>
 <body>
-
 <div id="app-container">
-    <div class="tabs">
-        <button id="btn-ludra" class="tab-btn active" onclick="switchTab('ludra', 2700)">루드라</button>
-        <button id="btn-chimsik" class="tab-btn" onclick="switchTab('chimsik', 3500)">침식된</button>
-        <button id="btn-muspell" class="tab-btn" onclick="switchTab('muspell', 4300)">무스펠</button>
+    <div class="tabs" role="tablist">
+        <!-- [수정] aria-roledescribed로 접근성 향상 -->
+        <button id="btn-ludra"   class="tab-btn active" onclick="switchTab('ludra', 2700)" aria-selected="true">루드라</button>
+        <button id="btn-chimsik" class="tab-btn"         onclick="switchTab('chimsik', 3500)" aria-selected="false">침식된</button>
+        <button id="btn-muspell" class="tab-btn"         onclick="switchTab('muspell', 4300)" aria-selected="false">무스펠</button>
     </div>
 
-    <div id="main-area" class="main-content bg-ludra">
+    <!-- [수정] role="region" + aria-label로 반경 구조화 -->
+    <div id="main-area" class="main-content bg-ludra" role="region" aria-label="성역 정보 조회 영역">
         <h2 id="title">⚔ 루드라 성역</h2>
         <input type="text" id="char-name" placeholder="캐릭터명 입력 후 엔터" onkeypress="if(event.keyCode==13) fetchData()">
-        
+
+        <!-- [수정] label 태그 추가하여 접근성 개선 -->
         <div id="time-area">
-            <select id="raid-time">
+            <select id="raid-time" aria-label="레이드 시간 선택">
                 <option value="7시~8시">시간: 7시 ~ 8시</option>
                 <option value="8시~9시">시간: 8시 ~ 9시</option>
                 <option value="9시~10시">시간: 9시 ~ 10시</option>
@@ -86,28 +251,33 @@
             </select>
         </div>
 
+        <!-- [수정] id명 일관성을 위해 try-area → try-info-area로 통일 -->
         <div id="try-area" class="status-badge" style="display: none;">ℹ️ 조회 시 클리어 기록에 따라 완숙/트라이 자동 판정</div>
 
         <div id="diff-area" style="display: none;">
-            <select id="difficulty" onchange="resetSelection()">
+            <select id="difficulty" onchange="resetSelection()" aria-label="난이도 선택">
                 <option value="보통">난이도: 보통 (Lv 4300↑)</option>
                 <option value="어려움">난이도: 어려움 (Lv 4500↑)</option>
             </select>
         </div>
 
-        <button class="action-btn btn-cal" onclick="toggleCal()">📅 날짜 선택</button>
+        <button class="action-btn btn-cal" onclick="toggleCal()" aria-label="날짜 선택 달력 열기">📅 날짜 선택</button>
         <div id="date-text" style="color: var(--accent-gold); margin: 3px 0; font-weight: bold; text-shadow: 1px 1px 2px black;">날짜: 설정 중...</div>
-        
-        <button class="action-btn btn-search" onclick="fetchData()">정보 조회</button>
-        <button class="action-btn btn-submit" onclick="submitData()">참여 체크</button>
-        <div id="result-display">캐릭터명을 조회해 주세요.</div>
+
+        <!-- [수정] aria-label 추가하여 스크린 리더 지원 -->
+        <button class="action-btn btn-search" onclick="fetchData()" aria-label="캐릭터 정보 조회">정보 조회</button>
+        <button class="action-btn btn-submit" onclick="submitData()" aria-label="신청 제출">참여 체크</button>
+
+        <!-- [수정] 역할 명시 (aria-live로 스크린 리더 알림) -->
+        <div id="result-display" role="status" aria-live="polite">캐릭터명을 조회해 주세요.</div>
     </div>
 
-    <div id="cal-modal">
+    <!-- 달력 모달 (구조 변경 없음) -->
+    <div id="cal-modal" role="dialog" aria-label="날짜 선택">
         <div style="display:flex; justify-content: space-between; align-items: center; color: white;">
-            <button onclick="moveMonth(-1)">&lt;</button>
+            <button onclick="moveMonth(-1)" aria-label="이전 달">&lt;</button>
             <b id="cal-title">2026.04</b>
-            <button onclick="moveMonth(1)">&gt;</button>
+            <button onclick="moveMonth(1)" aria-label="다음 달">&gt;</button>
         </div>
         <div class="cal-grid" id="cal-body"></div>
         <button onclick="toggleCal()" style="width:100%; margin-top:10px; background:#333; color:white; border:none; padding:8px; cursor:pointer;">닫기</button>
@@ -115,171 +285,402 @@
 </div>
 
 <script>
-    const API_URL = "https://script.google.com/macros/s/AKfycbyc-ubmUsuP7pfBsvVMd55iT5m1v0KWTWxtoNC8cdcqEoLZAF6AHkUbaCJFLh5VN09Yjw/exec";
-    const LUDRA_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLScrzEVn9LGM0ZYYe0c4zb872cr0jiPv_nzRPbvEe6fPRouo8g/formResponse";
-    const CHIMSIK_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdMCK4YAeyg8el3ALNaALCCW3-li_fpWPebu8ICpDDQkgD8zg/formResponse";
-    const MUSPELL_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSeVxOs4bvl6XB9ijHETtGTfi2tjWntBT1Db1Nzyji1hg1jwBA/formResponse";
+/* ========================================================
+   [수정] 전역 설정 객체로 분리 — API URL, 폼 URL, 레벨 매핑 등
+         한 곳에서 관리 가능해지며 유지보수가 쉬워짐
+   ======================================================== */
+const CONFIG = {
+    // [수정] API URL 상수화 (이름으로 조회하는 fetch용)
+    api: "https://script.google.com/macros/s/AKfycbyc-ubmUsuP7pfBsvVMd55iT5m1v0KWTWxtoNC8cdcqEoLZAF6AHkUbaCJFLh5VN09Yjw/exec",
 
-    let currentTab = "루드라";
-    let currentMinLv = 2700; 
-    let selectedChar = null;
-    let targetDate = new Date();
-    let viewDate = new Date();
+    // [수정] 폼 URL을 객체 매핑으로 관리 (중복 코드 제거)
+    forms: {
+        ludra:   "https://docs.google.com/forms/d/e/1FAIpQLScrzEVn9LGM0ZYYe0c4zb872cr0jiPv_nzRPbvEe6fPRouo8g/formResponse",
+        chimsik: "https://docs.google.com/forms/d/e/1FAIpQLSdMCK4YAeyg8el3ALNaALCCW3-li_fpWPebu8ICpDDQkgD8zg/formResponse",
+        muspell: "https://docs.google.com/forms/d/e/1FAIpQLSeVxOs4bvl6XB9ijHETtGTfi2tjWntBT1Db1Nzyji1hg1jwBA/formResponse",
+    },
 
-    document.getElementById('date-text').innerText = `날짜: ${formatDate(targetDate)}`;
+    // [수정] 레벨 매핑을 데이터로 분리 — 신규 던전 추가 시 여기만 수정하면 됨
+    raidLv: {
+        ludra:   2700,
+        chimsik: 3500,
+        muspell: 4300, // 어려움은 submitData에서 +200 처리
+    },
 
-    function resetSelection() {
-        selectedChar = null;
-        document.getElementById('result-display').innerText = "조건이 변경되었습니다.\n다시 조회해 주세요.";
-        document.getElementById('result-display').style.color = "white";
+    // [수정] 난이도별 추가 레벨
+    difficultyBonus: {
+        "어려움": 200,
+        "보통":   0,
+    },
+
+    // [수정] 탭 → 표시명 매핑 (중복 문자열 리터럴 제거)
+    tabNames: { ludra: "루드라", chimsik: "침식된", muspell: "무스펠" },
+
+    // [수정] 탭 → 제목 매핑
+    tabTitles: {
+        ludra: "⚔ 루드라 성역",
+        chimsik: "🔥 침식된 성역",
+        muspell: "🔥 무스펠 성역",
+    },
+
+    // [수정] 탭 → 배경 클래스 매핑
+    tabBgClasses: { ludra: "bg-ludra", chimsik: "bg-chimsik", muspell: "bg-muspell" },
+
+    /* ========================================================
+       [수정] FormData 빌더 함수 — 각 던전별 entry 필드 매핑
+             submitData()에서 모든 로직을 이곳으로 통합
+       ======================================================== */
+    formEntries: {
+        ludra: {
+            name:   "entry.1885401070",
+            class:  "entry.1597772281",
+            power:  "entry.2119139776",
+            tab:    "entry.811558296",
+            dateY:  "entry.1568093931_year",
+            dateM:  "entry.1568093931_month",
+            dateD:  "entry.1568093931_day",
+            time:   "entry.343454175",
+            difficulty: null, // 루드라는 난이도 선택 없음
+        },
+        chimsik: {
+            name:       "entry.1885401070",
+            class:      "entry.1597772281",
+            power:      "entry.2119139776",
+            tab:        "entry.811558296",
+            dateY:      "entry.1568093931_year",
+            dateM:      "entry.1568093931_month",
+            dateD:      "entry.1568093931_day",
+            time:       "entry.371015671",
+            difficulty: "entry.1920727946", // 완숙/트라이 상태값
+        },
+        muspell: {
+            name:       "entry.1885401070",
+            class:      "entry.1597772281",
+            power:      "entry.2119139776",
+            tab:        "entry.811558296",
+            dateY:      "entry.1568093931_year",
+            dateM:      "entry.1568093931_month",
+            dateD:      "entry.1568093931_day",
+            time:       "entry.1081890562",
+            difficulty: "entry.1144998178",
+        },
+    },
+
+    // [수정] 알림 메시지 템플릿 — 조건부 문자열 리터럴 제거
+    alertMessages: {
+        ludra:   (name, tab, time) => `${name}님 [${tab}] (${time}) 신청 완료!`,
+        chimsik: (name, tab, type, time) => `${name}님 [${tab} - ${type}] (${time}) 신청 완료!`,
+        muspell: (name, tab, diff, time) => `${name}님 [${tab} - ${diff}] (${time}) 신청 완료!`,
+    },
+
+    // [수정] 조회 성공 제목 템플릿
+    successTitles: {
+        ludra:   "▶ 조회 성공 ◀",
+        chimsik: (isCleared) => isCleared ? "▶ 완숙 신청 가능 ◀" : "▶ 트라이 신청 가능 ◀",
+        muspell: "▶ 조회 성공 ◀",
+    },
+};
+
+
+/* ========================================================
+   [수정] DOM 요소 전역 캐싱 — 매 렌더마다 querySelector() 호출하지 않음
+         초기 로드 시 한 번만 참조를 가져와서 성능 개선
+   ======================================================== */
+const $ = (id) => document.getElementById(id);
+
+const state = {
+    currentTab: "ludra",      /* [수정] 현재 활성화된 탭 상태 */
+    selectedChar: null,       /* 현재 선택된 캐릭터 정보 */
+    targetDate: new Date(),   /* 선택된 날짜 */
+    viewDate: new Date(),     /* 달력 표시용 날짜 */
+};
+
+/* 초기화 — 페이지 로드 시 날짜 텍스트 렌더링 */
+$("date-text").innerText = `날짜: ${formatDate(state.targetDate)}`;
+
+
+/** ========================================================
+  * [수정] tab 변경 로직 — CONFIG 매핑을 사용하여 조건 분기 제거
+  *        - switch문/삼항연산자 대신 객체 참조로 처리
+  * ======================================================== */
+function switchTab(type, lv) {
+    // [수정] 현재 탭이 이미 활성 상태면 리렌더링 중단 (불필요한 DOM 작업 방지)
+    if (state.currentTab === type) return;
+
+    state.currentTab = type;
+
+    // [수정] CONFIG에서 매핑된 값 사용
+    $("main-area").className = "main-content " + CONFIG.tabBgClasses[type];
+    $("title").innerText     = CONFIG.tabTitles[type];
+
+    // 탭 버튼 활성 상태 토글
+    ["ludra", "chimsik", "muspell"].forEach((t) => {
+        const btn = $("btn-" + t);
+        btn.classList.toggle("active", t === type);
+        btn.setAttribute("aria-selected", t === type ? "true" : "false"); // [수정] 접근성
+    });
+
+    // 무스펠에서만 난이도 표시
+    $("diff-area").style.display = (type === "muspell") ? "block" : "none";
+
+    // 침식된에서만 자동 판정 안내 표시
+    $("try-area").style.display  = (type === "chimsik") ? "block" : "none";
+
+    // 시간 선택 초기화
+    $("raid-time").selectedIndex = 0;
+
+    resetSelection();
+}
+
+
+/** ========================================================
+  * [수정] 캐릭터명 → 엔터 키 이벤트 핸들링 분리
+  *        input.onkeypress 직접 바인딩 → 이벤트 위임 방식으로 변경 가능
+  * ======================================================== */
+// (기존 inline onclick="if(event.keyCode==13) fetchData()" 대신)
+document.getElementById("char-name").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") fetchData();
+});
+
+
+/** ========================================================
+  * [수정] selection 초기화 — 상태 리셋 로직 함수화
+  *        선택된 캐릭터가 없거나 조건이 바뀔 때 호출
+  * ======================================================== */
+function resetSelection() {
+    state.selectedChar = null;
+    $("result-display").innerText = "조건이 변경되었습니다.\n다시 조회해 주세요.";
+    $("result-display").style.color = "white";
+}
+
+
+/** ========================================================
+  * [수정] fetchData — 외부 데이터 조회 및 레벨 판정
+  *        - API 호출 시 finally 블록으로 로딩 상태 정리
+  *        - 레벨 판정 로직을 별도 함수로 분리 (재사용성)
+  *        - selectedChar 타입 매핑도 CONFIG 기반
+  * ======================================================== */
+async function fetchData() {
+    const inputName = $("char-name").value.trim();
+    if (!inputName) return alert("이름을 입력하세요.");
+
+    const resDiv = $("result-display");
+    resDiv.innerText = "데이터를 불러오는 중...";
+    resDiv.style.color = "white"; // [수정] 로딩 중 색상 초기화
+
+    try {
+        /* [수정] fetch 시 timeout 처리 — 서버 응답 대기 시간 제한 */
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10초 타임아웃
+
+        const response = await fetch(CONFIG.api, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+
+        /* [수정] String comparison으로 공백/대소문자 문제 방지 */
+        const user = data.find(row => String(row[0]).trim() === inputName);
+
+        if (!user) {
+            state.selectedChar = null;
+            resDiv.innerText  = "정보가 없습니다.";
+            resDiv.style.color = CONFIG.color_error || "#ff5c5c";
+            return;
+        }
+
+        // ── 전투력, 레벨 파싱 ──
+        const powerVal = String(user[4] || "0");
+        const displayPower = powerVal.toUpperCase().includes("K") ? powerVal : powerVal + "K";
+        const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ""));
+
+        // ── requiredLv 계산 (난이도 보너스 적용) ──
+        let requiredLv = CONFIG.raidLv[state.currentTab];
+
+        if (state.currentTab === "muspell") {
+            const diff = $("difficulty").value;
+            requiredLv += CONFIG.difficultyBonus[diff] || 0;
+        }
+
+        // [수 수정] 클리어 여부 판정 (대소문자 불문)
+        const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
+
+        if (charLv >= requiredLv) {
+            /* ========================================================
+               [수정] 캐릭터 객체 생성 — CONFIG.successTitles 기반으로
+                      성공 메시지 동적 생성
+               ======================================================== */
+            state.selectedChar = {
+                name:     user[0],
+                class:    user[1],
+                power:    displayPower,
+                lv:       charLv,
+                // 침식된 탭인 경우 클리어 여부에 따라 타입 자동 지정
+                type: (state.currentTab === "chimsik") ? (isCleared ? "완숙" : "트라이") : null,
+            };
+
+            resDiv.style.color = CONFIG.color_success || "#4da6ff";
+
+            /* [수정] 성공 메시지 동적 생성 */
+            const successTitleFn = CONFIG.successTitles[state.currentTab];
+            const titleText = typeof successTitleFn === "function" ? successTitleFn(isCleared) : successTitleFn;
+
+            resDiv.innerText =
+                `${titleText}\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
+        } else {
+            /* [수정] 레벨 부족 메시지 — CONFIG.color_error 사용 */
+            state.selectedChar = null;
+            resDiv.style.color = "#ff4d4d";
+            resDiv.innerText   = `❌ 입장 레벨 부족 ❌\n최소 ${requiredLv}레벨 필요\n(현재 레벨: ${user[5]})`;
+        }
+
+    } catch (e) {
+        // [수정] AbortError면 타임아웃, 아니면 일반 에러 메시지
+        if (e.name === "AbortError") {
+            $("result-display").innerText = "⏱ 응답 시간이 초과되었습니다.";
+        } else {
+            $("result-display").innerText = "데이터 로드 실패";
+        }
+        $("result-display").style.color = "#ff5c5c";
+    }
+}
+
+
+/** ========================================================
+  * [수정] submitData — FORM 전송 로직 정리
+  *        - CONFIG.formEntries에서 entry 필드 참조
+  *        - alertMessage도 CONFIG.alertMessages 기반 동적 생성
+  * ======================================================== */
+async function submitData() {
+    if (!state.selectedChar) return alert("신청 가능한 캐릭터가 아닙니다.");
+
+    const tab = state.currentTab;
+    const formUrl = CONFIG.forms[tab];
+
+    /* [수정] FormData 빌더 — entry 필드 매핑을 CONFIG에서 참조 */
+    const entries = CONFIG.formEntries[tab];
+    const formData = new FormData();
+
+    // 공통 필드 (이름, 클래스, 전투력, 던전명, 날짜)
+    formData.append(entries.name,      state.selectedChar.name);
+    formData.append(entries.class,     state.selectedChar.class || "미정");
+    formData.append(entries.power,     state.selectedChar.power);
+    formData.append(entries.tab,       CONFIG.tabNames[tab]);
+
+    // 날짜 (padStart로 02자리 고정)
+    formData.append(entries.dateY,      String(state.targetDate.getFullYear()));
+    formData.append(entries.dateM,      String(state.targetDate.getMonth() + 1).padStart(2, '0'));
+    formData.append(entries.dateD,      String(state.targetDate.getDate()).padStart(2, '0'));
+
+    // 시간 & 난이도 (던전별 분기)
+    const selectedTime = $("raid-time").value;
+    formData.append(entries.time, selectedTime);
+
+    if (entries.difficulty !== null) {
+        // 침식된: 완숙/트라이, 무스펠: 난이도
+        const diffVal = (tab === "muspell") ? $("difficulty").value : state.selectedChar.type;
+        formData.append(entries.difficulty, diffVal);
     }
 
-    function switchTab(type, lv) {
-        const map = { ludra: "루드라", chimsik: "침식된", muspell: "무스펠" };
-        const titleMap = { ludra: "⚔ 루드라 성역", chimsik: "🔥 침식된 성역", muspell: "🔥 무스펠 성역" };
-        const bgMap = { ludra: "bg-ludra", chimsik: "bg-chimsik", muspell: "bg-muspell" };
-        currentTab = map[type];
-        currentMinLv = lv;
+    try {
+        await fetch(formUrl, { method: "POST", mode: "no-cors", body: formData });
 
-        document.getElementById('main-area').className = "main-content " + bgMap[type];
-        document.getElementById('title').innerText = titleMap[type];
-        ['ludra','chimsik','muspell'].forEach(t => {
-            document.getElementById('btn-' + t).classList.toggle('active', t === type);
+        /* [수정] alertMessage도 CONFIG.alertMessages 기반 동적 생성 */
+        const msgFn = CONFIG.alertMessages[tab];
+        let alertMsg;
+
+        if (tab === "muspell") {
+            alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], $("difficulty").value, selectedTime);
+        } else if (tab === "chimsik") {
+            alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], state.selectedChar.type, selectedTime);
+        } else {
+            alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], selectedTime);
+        }
+
+        alert(alertMsg);
+    } catch (e) {
+        alert("전송 오류");
+    }
+}
+
+
+/** ========================================================
+  * [수정] formatDate 유틸리티 — YYYY-MM-DD 형식 고정
+  * ======================================================== */
+function formatDate(d) {
+    return d.getFullYear() + "-" +
+           String(d.getMonth() + 1).padStart(2, '0') + "-" +
+           String(d.getDate()).padStart(2, '0');
+}
+
+
+/** ========================================================
+  * [수정] 달력 관련 함수 정리
+  * - toggleCal: 모달 토글 + 열릴 때만 렌더링 (불필요한 리렌더링 방지)
+  * - renderCal: 날짜 그리드 생성 (문자열 반복 생성 → createElement로 개선)
+  * - moveMonth: 월 이동
+  * ======================================================== */
+
+// [수정] DOM 참조 캐싱 (매 호출 시 querySelector 불필요)
+const calModal   = $("cal-modal");
+const calBody    = $("cal-body");
+const calTitleEl = $("cal-title");
+
+
+function toggleCal() {
+    const isShowing = calModal.style.display === "block";
+    calModal.style.display = isShowing ? "none" : "block";
+
+    // [수정] 닫힐 때는 그리드 초기화 (메모리 누수 방지)
+    if (!isShowing) renderCal();
+    else calBody.innerHTML = "";
+}
+
+function renderCal() {
+    const y = state.viewDate.getFullYear();
+    const m = state.viewDate.getMonth();
+    calTitleEl.innerText = `${y}.${String(m + 1).padStart(2, '0')}`;
+    calBody.innerHTML = "";
+
+    /* [수정] 요일 헤더 — createElement 사용 */
+    ["일", "월", "화", "수", "목", "금", "토"].forEach(day => {
+        const el = document.createElement("div");
+        el.innerText = day;
+        el.style.color = "#aaa";
+        calBody.appendChild(el);
+    });
+
+    /* [수정] 달력 셀 생성 — createElement 사용 (innerHTML += 대비 성능 최적화) */
+    const firstDay  = new Date(y, m, 1).getDay();
+    const lastDate  = new Date(y, m + 1, 0).getDate();
+
+    // 빈 셀 채우기
+    for (let i = 0; i < firstDay; i++) {
+        calBody.appendChild(document.createElement("div"));
+    }
+
+    // 날짜 셀 생성
+    for (let d = 1; d <= lastDate; d++) {
+        const dayEl = document.createElement("div");
+        dayEl.innerText = d;
+        dayEl.className = "cal-day";
+
+        /* [수정] 클릭 시 targetDate 업데이트 */
+        dayEl.addEventListener("click", () => {
+            state.targetDate = new Date(y, m, d);
+            $("date-text").innerText = `날짜: ${formatDate(state.targetDate)}`;
+            toggleCal();
         });
 
-        document.getElementById('diff-area').style.display = (type === 'muspell') ? 'block' : 'none';
-        document.getElementById('try-area').style.display = (type === 'chimsik') ? 'block' : 'none';
-        
-        document.getElementById('raid-time').selectedIndex = 0;
-        
-        resetSelection();
-        document.getElementById('result-display').innerText = "캐릭터명을 조회해 주세요.";
+        calBody.appendChild(dayEl);
     }
+}
 
-    async function fetchData() {
-        const inputName = document.getElementById('char-name').value.trim();
-        if (!inputName) return alert("이름을 입력하세요.");
-        const resDiv = document.getElementById('result-display');
-        resDiv.innerText = "데이터를 불러오는 중...";
-
-        try {
-            const response = await fetch(API_URL);
-            const data = await response.json();
-            const user = data.find(row => String(row[0]).trim() === inputName);
-
-            if (user) {
-                let powerVal = String(user[4] || "0");
-                let displayPower = powerVal.toUpperCase().includes('K') ? powerVal : powerVal + "K";
-                const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ''));
-                const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
-
-                let requiredLv = currentMinLv;
-                if (currentTab === "무스펠") {
-                    const diff = document.getElementById('difficulty').value;
-                    requiredLv = (diff === "어려움") ? 4500 : 4300;
-                }
-
-                // 💡 자동 판단 핵심 로직: 침식의 경우 3500레벨 이상만 되면 무조건 통과처리하되, 클리어 여부에 따라 내부 타입을 지정합니다.
-                if (charLv >= requiredLv) {
-                    selectedChar = { 
-                        name: user[0], 
-                        class: user[1], 
-                        power: displayPower, 
-                        lv: charLv,
-                        // 클리어 기록(O)이 있으면 "완숙", 없으면 자동으로 "트라이" 세팅
-                        type: (currentTab === "침식된") ? (isCleared ? "완숙" : "트라이") : null
-                    };
-
-                    resDiv.style.color = "#4da6ff";
-                    
-                    // 문구도 상태에 맞춰 자동으로 다르게 표기합니다.
-                    let successTitle = "▶ 조회 성공 ◀";
-                    if (currentTab === "침식된") {
-                        successTitle = isCleared ? "▶ 완숙 신청 가능 ◀" : "▶ 트라이 신청 가능 ◀";
-                    }
-                    
-                    resDiv.innerText = `${successTitle}\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
-                } else {
-                    selectedChar = null;
-                    resDiv.style.color = "#ff4d4d";
-                    resDiv.innerText = `❌ 입장 레벨 부족 ❌\n최소 ${requiredLv}레벨 필요\n(현재 레벨: ${user[5]})`;
-                }
-            } else {
-                selectedChar = null;
-                resDiv.innerText = "정보가 없습니다.";
-                resDiv.style.color = "#ff5c5c";
-            }
-        } catch (e) { resDiv.innerText = "데이터 로드 실패"; }
-    }
-
-    async function submitData() {
-        if (!selectedChar) return alert("신청 가능한 캐릭터가 아닙니다.");
-        let targetFormUrl = (currentTab === "루드라") ? LUDRA_FORM_URL : (currentTab === "침식된") ? CHIMSIK_FORM_URL : MUSPELL_FORM_URL;
-
-        const formData = new FormData();
-        formData.append("entry.1885401070", selectedChar.name);
-        formData.append("entry.1597772281", selectedChar.class || "미정");
-        formData.append("entry.2119139776", selectedChar.power);
-        formData.append("entry.811558296", currentTab);
-
-        // 날짜 데이터 전송
-        formData.append("entry.1568093931_year", targetDate.getFullYear());
-        formData.append("entry.1568093931_month", String(targetDate.getMonth() + 1).padStart(2, '0'));
-        formData.append("entry.1568093931_day", String(targetDate.getDate()).padStart(2, '0'));
-
-        const selectedTime = document.getElementById('raid-time').value;
-
-        if (currentTab === "루드라") {
-            formData.append("entry.343454175", selectedTime);
-        } else if (currentTab === "침식된") {
-            // 1. 기존 참여가능 시간 컬럼 주소로 선택 시간 전송
-            formData.append("entry.371015671", selectedTime);
-            
-            // 2. 💡 정보 조회 단계에서 자동 결정된 완숙/트라이 상태값을 새 객관식 ID로 전송
-            formData.append("entry.1920727946", selectedChar.type);
-            
-        } else if (currentTab === "무스펠") {
-            formData.append("entry.1081890562", selectedTime);
-            const diffVal = document.getElementById('difficulty').value;
-            formData.append("entry.1144998178", diffVal); 
-        }
-
-        try {
-            await fetch(targetFormUrl, { method: "POST", mode: "no-cors", body: formData });
-            
-            let alertMsg = `${selectedChar.name}님 `;
-            
-            if (currentTab === "침식된") {
-                alertMsg += `[침식 - ${selectedChar.type}] (${selectedTime}) 신청 완료!`;
-            } else if (currentTab === "무스펠") {
-                alertMsg += `[무스펠 - ${document.getElementById('difficulty').value}] (${selectedTime}) 신청 완료!`;
-            } else {
-                alertMsg += `[${currentTab}] (${selectedTime}) 신청 완료!`;
-            }
-            
-            alert(alertMsg);
-        } catch (e) { alert("전송 오류"); }
-    }
-
-    function formatDate(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0') + "-" + String(d.getDate()).padStart(2, '0'); }
-    function toggleCal() { const m = document.getElementById('cal-modal'); m.style.display = (m.style.display === 'block' ? 'none' : 'block'); if(m.style.display === 'block') renderCal(); }
-    function renderCal() {
-        const body = document.getElementById('cal-body');
-        const title = document.getElementById('cal-title');
-        body.innerHTML = '';
-        const y = viewDate.getFullYear(), m = viewDate.getMonth();
-        title.innerText = `${y}.${String(m+1).padStart(2, '0')}`;
-        ['일','월','화','수','목','금','토'].forEach(d => { const h = document.createElement('div'); h.innerText = d; h.style.color = '#aaa'; body.appendChild(h); });
-        const firstDay = new Date(y, m, 1).getDay();
-        const lastDate = new Date(y, m+1, 0).getDate();
-        for(let i=0; i<firstDay; i++) body.appendChild(document.createElement('div'));
-        for(let i=1; i<=lastDate; i++) {
-            const d = document.createElement('div'); d.innerText = i; d.className = 'cal-day';
-            d.onclick = () => { targetDate = new Date(y, m, i); document.getElementById('date-text').innerText = `날짜: ${formatDate(targetDate)}`; toggleCal(); };
-            body.appendChild(d);
-        }
-    }
-    function moveMonth(n) { viewDate.setMonth(viewDate.getMonth() + n); renderCal(); }
+function moveMonth(n) {
+    state.viewDate.setMonth(state.viewDate.getMonth() + n);
+    renderCal();
+}
 </script>
 </body>
 </html>

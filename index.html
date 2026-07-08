@@ -19,6 +19,7 @@
             --btn-blue: #2980b9;
             --btn-red: #c0392b;
             --btn-gray: rgba(52, 73, 94, 0.8);
+            --btn-green: #27ae60; /* [신규] 참여자 보기 버튼 색상 추가 */
 
             /* ── 상태 메시지 색상 ── */
             --color-success: #4da6ff;   /* 조회 성공 시 텍스트 */
@@ -176,9 +177,10 @@
         .action-btn:active { transform: scale(0.97); } /* [수정] 클릭 시각적 피드백 */
 
         /* [수정] 색상 클래스 → CSS 변수로 연결 */
-        .btn-cal   { background: var(--btn-gray); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
+        .btn-cal  { background: var(--btn-gray); color: var(--accent-gold); border: 1px solid var(--accent-gold); }
         .btn-search { background: var(--btn-blue); opacity: 0.9; }
         .btn-submit { background: var(--btn-red); opacity: 0.9; }
+        .btn-participants { background: var(--btn-green); opacity: 0.9; } /* [신규] 참여자 보기 버튼 색상 지정 */
 
         /* ========================================================
            [수정] 결과 표시 영역 스타일 정리
@@ -225,6 +227,68 @@
 
         .cal-day { padding: 8px 0; cursor: pointer; border-radius: 3px; font-size: 12px; }
         .cal-day:hover { background: var(--accent-gold); color: black; }
+
+        /* ========================================================
+           [신규 추가] ⑧ 참여자 목록 모달 레이아웃 스타일에 적용
+           ======================================================== */
+        #participants-modal {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 320px;
+            height: 480px;
+            background: rgba(10, 15, 20, 0.98);
+            border: 2px solid var(--accent-gold);
+            z-index: 200;
+            padding: 15px;
+            box-shadow: 0 0 25px rgba(0,0,0,0.9);
+            box-sizing: border-box;
+            border-radius: 6px;
+        }
+
+        .p-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(224, 205, 171, 0.3);
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+
+        .p-modal-title {
+            color: var(--accent-gold);
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .p-modal-close {
+            background: none;
+            border: none;
+            color: #aaa;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .p-modal-close:hover { color: white; }
+
+        .p-modal-body {
+            width: 100%;
+            height: calc(100% - 40px);
+            overflow-y: auto;
+            color: white;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            text-align: left;
+            padding-right: 5px;
+        }
+        /* 스크롤바 커스텀 */
+        .p-modal-body::-webkit-scrollbar { width: 6px; }
+        .p-modal-body::-webkit-scrollbar-thumb { background: var(--accent-gold); border-radius: 3px; }
+        .p-modal-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
     </style>
 </head>
 <body>
@@ -268,6 +332,9 @@
         <!-- [수정] aria-label 추가하여 스크린 리더 지원 -->
         <button class="action-btn btn-search" onclick="fetchData()" aria-label="캐릭터 정보 조회">정보 조회</button>
         <button class="action-btn btn-submit" onclick="submitData()" aria-label="신청 제출">참여 체크</button>
+        
+        <!-- ① [신규 추가] 참여 체크 버튼 아래 "참여자 보기" 버튼 배치 -->
+        <button class="action-btn btn-participants" onclick="toggleParticipantsModal()" aria-label="이번 주 참여자 명단 보기">👥 참여자 보기</button>
 
         <!-- [수정] 역할 명시 (aria-live로 스크린 리더 알림) -->
         <div id="result-display" role="status" aria-live="polite">캐릭터명을 조회해 주세요.</div>
@@ -282,6 +349,15 @@
         </div>
         <div class="cal-grid" id="cal-body"></div>
         <button onclick="toggleCal()" style="width:100%; margin-top:10px; background:#333; color:white; border:none; padding:8px; cursor:pointer;">닫기</button>
+    </div>
+
+    <!-- ⑧ [신규 추가] 이번 주 참여자 조회 출력 전용 모달 컴포넌트 -->
+    <div id="participants-modal" role="dialog" aria-label="이번 주 명단">
+        <div class="p-modal-header">
+            <span class="p-modal-title">📋 주간 참여자 명단</span>
+            <button class="p-modal-close" onclick="toggleParticipantsModal()">&times;</button>
+        </div>
+        <div id="participants-body" class="p-modal-body">조회 중...</div>
     </div>
 </div>
 
@@ -510,7 +586,7 @@ async function fetchData() {
         if (charLv >= requiredLv) {
             /* ========================================================
                [수정] 캐릭터 객체 생성 — CONFIG.successTitles 기반으로
-                      성공 메시지 동적 생성
+                     성공 메시지 동적 생성
                ======================================================== */
             state.selectedChar = {
                 name:     user[0],
@@ -681,6 +757,71 @@ function renderCal() {
 function moveMonth(n) {
     state.viewDate.setMonth(state.viewDate.getMonth() + n);
     renderCal();
+}
+
+/** ========================================================
+  * [신규 추가] ②, ③, ④, ⑤, ⑥, ⑦, ⑧ 참여자 보기 모달 제어 및 데이터 바인딩
+  * ======================================================== */
+function toggleParticipantsModal() {
+    const pModal = $("participants-modal");
+    const isShowing = pModal.style.display === "block";
+    
+    if (isShowing) {
+        pModal.style.display = "none";
+    } else {
+        pModal.style.display = "block";
+        fetchWeeklyParticipants();
+    }
+}
+
+/**
+ * Apps Script API 서버로부터 이번 주 참여자 명단을 받아오는 비동기 함수
+ */
+async function fetchWeeklyParticipants() {
+    const pBody = $("participants-body");
+    pBody.innerText = "이번 주 명단을 불러오는 중입니다...";
+    
+    try {
+        // mode=participants 파라미터 결합 처리
+        const requestUrl = CONFIG.api + "?mode=participants";
+        
+        const response = await fetch(requestUrl);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const result = await response.json();
+        
+        if (result.status === "success") {
+            renderParticipantsData(result.data);
+        } else {
+            pBody.innerText = "오류가 발생했습니다:\n" + (result.message || "알 수 없는 에러");
+        }
+    } catch (error) {
+        pBody.innerText = "데이터 로드 실패:\n" + error.toString();
+    }
+}
+
+/**
+ * 받아온 참여자 JSON 오브젝트를 예시 규격 템플릿에 맞추어 변환 및 화면 매핑
+ */
+function renderParticipantsData(data) {
+    const pBody = $("participants-body");
+    let textOutput = "===== 이번 주 참여자 =====\n\n";
+    
+    const sections = ["루드라", "침식", "무스펠"];
+    
+    sections.forEach(section => {
+        textOutput += `[${section}]\n`;
+        if (data[section] && data[section].length > 0) {
+            data[section].forEach(name => {
+                textOutput += `${name}\n`;
+            });
+        } else {
+            textOutput += "(신청 내역 없음)\n";
+        }
+        textOutput += "\n";
+    });
+    
+    pBody.innerText = textOutput;
 }
 </script>
 </body>

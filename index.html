@@ -267,13 +267,13 @@
 <body>
 <div id="app-container">
     <div class="tabs" role="tablist">
-        <button id="btn-ludra"   class="tab-btn active" onclick="switchTab('ludra', 2700)" aria-selected="true">루드라</button>
+        <button id="btn-ludra"   class="tab-btn active" onclick="switchTab('ludra', 2700)" aria-selected="true">비탄의설원</button>
         <button id="btn-chimsik" class="tab-btn"         onclick="switchTab('chimsik', 3500)" aria-selected="false">침식된</button>
         <button id="btn-muspell" class="tab-btn"         onclick="switchTab('muspell', 4300)" aria-selected="false">무스펠</button>
     </div>
 
     <div id="main-area" class="main-content bg-ludra" role="region" aria-label="성역 정보 조회 영역">
-        <h2 id="title">⚔ 루드라 성역</h2>
+        <h2 id="title">⚔ 비탄의설원</h2>
         <input type="text" id="char-name" placeholder="캐릭터명 입력 후 엔터">
 
         <div id="time-area">
@@ -290,8 +290,9 @@
 
         <div id="diff-area" style="display: none;">
             <select id="difficulty" onchange="resetSelection()" aria-label="난이도 선택">
-                <option value="보통">난이도: 보통 (Lv 4300↑)</option>
-                <option value="어려움">난이도: 어려움 (Lv 4500↑)</option>
+                <option value="쉬움">난이도: 쉬움 (Lv 5800↑)</option>
+                <option value="보통">난이도: 보통 (Lv 6000↑)</option>
+                <option value="어려움">난이도: 어려움 (Lv 6200↑)</option>
             </select>
         </div>
 
@@ -338,17 +339,23 @@ const CONFIG = {
         muspell: "https://docs.google.com/forms/d/e/1FAIpQLSeVxOs4bvl6XB9ijHETtGTfi2tjWntBT1Db1Nzyji1hg1jwBA/formResponse",
     },
     raidLv: {
-        ludra:   2700,
         chimsik: 3500,
-        muspell: 4300, 
     },
-    difficultyBonus: {
-        "어려움": 200,
-        "보통":   0,
+    difficultyRequirements: {
+        ludra: {
+            "쉬움": 5800,
+            "보통": 6000,
+            "어려움": 6200,
+        },
+        muspell: {
+            "보통": 4300,
+            "어려움": 4500,
+        },
     },
-    tabNames: { ludra: "루드라", chimsik: "침식", muspell: "무스펠" }, /* [수정] 백엔드 키값 규격 매핑 일치 */
+    tabNames: { ludra: "비탄의설원", chimsik: "침식", muspell: "무스펠" }, /* [수정] 백엔드 키값 규격 매핑 일치 */
+    formTabValues: { ludra: "루드라", chimsik: "침식", muspell: "무스펠" },
     tabTitles: {
-        ludra: "⚔ 루드라 성역",
+        ludra: "⚔ 비탄의설원",
         chimsik: "🔥 침식된 성역",
         muspell: "🔥 무스펠 성역",
     },
@@ -364,7 +371,7 @@ const CONFIG = {
             dateM:  "entry.1568093931_month",
             dateD:  "entry.1568093931_day",
             time:   "entry.343454175",
-            difficulty: null, 
+            difficulty: "entry.659942973", 
         },
         chimsik: {
             name:       "entry.1885401070",
@@ -390,7 +397,7 @@ const CONFIG = {
         },
     },
     alertMessages: {
-        ludra:   (name, tab, time) => `${name}님 [${tab}] (${time}) 신청 완료!`,
+        ludra:   (name, tab, diff, time) => `${name}님 [${tab} - ${diff}] (${time}) 신청 완료!`,
         chimsik: (name, tab, type, time) => `${name}님 [${tab} - ${type}] (${time}) 신청 완료!`,
         muspell: (name, tab, diff, time) => `${name}님 [${tab} - ${diff}] (${time}) 신청 완료!`,
     },
@@ -412,6 +419,45 @@ const state = {
 
 $("date-text").innerText = `날짜: ${formatDate(state.targetDate)}`;
 
+function getDifficultyOptions(tab) {
+    return CONFIG.difficultyRequirements[tab] || null;
+}
+
+function renderDifficultyOptions(tab) {
+    const difficultySelect = $("difficulty");
+    const options = getDifficultyOptions(tab);
+
+    if (!options) {
+        difficultySelect.innerHTML = "";
+        return;
+    }
+
+    difficultySelect.innerHTML = Object.entries(options)
+        .map(([name, requiredLv]) => `<option value="${name}">난이도: ${name} (Lv ${requiredLv}↑)</option>`)
+        .join("");
+}
+
+function getRequiredLv(tab) {
+    const difficultyOptions = getDifficultyOptions(tab);
+
+    if (difficultyOptions) {
+        const selectedDifficulty = $("difficulty").value;
+        return difficultyOptions[selectedDifficulty] || 0;
+    }
+
+    return CONFIG.raidLv[tab] || 0;
+}
+
+function syncTabUi(type) {
+    const hasDifficulty = Boolean(getDifficultyOptions(type));
+    $("diff-area").style.display = hasDifficulty ? "block" : "none";
+    $("try-area").style.display  = (type === "chimsik") ? "block" : "none";
+
+    if (hasDifficulty) {
+        renderDifficultyOptions(type);
+    }
+}
+
 function switchTab(type, lv) {
     if (state.currentTab === type) return;
 
@@ -426,12 +472,13 @@ function switchTab(type, lv) {
         btn.setAttribute("aria-selected", t === type ? "true" : "false"); 
     });
 
-    $("diff-area").style.display = (type === "muspell") ? "block" : "none";
-    $("try-area").style.display  = (type === "chimsik") ? "block" : "none";
+    syncTabUi(type);
     $("raid-time").selectedIndex = 0;
 
     resetSelection();
 }
+
+syncTabUi(state.currentTab);
 
 document.getElementById("char-name").addEventListener("keypress", (e) => {
     if (e.key === "Enter") fetchData();
@@ -474,12 +521,7 @@ async function fetchData() {
         const displayPower = powerVal.toUpperCase().includes("K") ? powerVal : powerVal + "K";
         const charLv = parseInt(String(user[5] || "0").replace(/[^0-9]/g, ""));
 
-        let requiredLv = CONFIG.raidLv[state.currentTab];
-
-        if (state.currentTab === "muspell") {
-            const diff = $("difficulty").value;
-            requiredLv += CONFIG.difficultyBonus[diff] || 0;
-        }
+        const requiredLv = getRequiredLv(state.currentTab);
 
         const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
 
@@ -526,7 +568,7 @@ async function submitData() {
     formData.append(entries.name,      state.selectedChar.name);
     formData.append(entries.class,     state.selectedChar.class || "미정");
     formData.append(entries.power,     state.selectedChar.power);
-    formData.append(entries.tab,       CONFIG.tabNames[tab]);
+    formData.append(entries.tab,       CONFIG.formTabValues[tab] || CONFIG.tabNames[tab]);
 
     formData.append(entries.dateY,      String(state.targetDate.getFullYear()));
     formData.append(entries.dateM,      String(state.targetDate.getMonth() + 1).padStart(2, '0'));
@@ -536,7 +578,7 @@ async function submitData() {
     formData.append(entries.time, selectedTime);
 
     if (entries.difficulty !== null) {
-        const diffVal = (tab === "muspell") ? $("difficulty").value : state.selectedChar.type;
+        const diffVal = (tab === "chimsik") ? state.selectedChar.type : $("difficulty").value;
         formData.append(entries.difficulty, diffVal);
     }
 
@@ -546,7 +588,7 @@ async function submitData() {
         const msgFn = CONFIG.alertMessages[tab];
         let alertMsg;
 
-        if (tab === "muspell") {
+        if (tab === "muspell" || tab === "ludra") {
             alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], $("difficulty").value, selectedTime);
         } else if (tab === "chimsik") {
             alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], state.selectedChar.type, selectedTime);

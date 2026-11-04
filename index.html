@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>성역 관리 시스템</title>
+    <meta name="theme-color" content="#0f1419">
+    <meta name="application-name" content="성역 관리">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="성역 관리">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="icons/app-icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icons/app-icon-180.png">
+    <title>성역 관리</title>
     <style>
         /* ========================================================
            [수정] CSS 변수를 체계적으로 분리하여 유지보수성 향상
@@ -1058,6 +1066,14 @@ function tickClock() {
 setInterval(() => {
     if (state.currentTab === "schedule" && scheduleState.data) tickClock();
 }, 1000);
+
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./service-worker.js").catch((error) => {
+            console.error("서비스 워커 등록 실패:", error);
+        });
+    });
+}
 </script>
 </body>
 </html>

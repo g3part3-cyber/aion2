@@ -1,0 +1,25 @@
+{
+  "name": "성역 관리 시스템",
+  "short_name": "성역 관리",
+  "description": "성역 참여 관리와 카사카 서버 아티팩트·일일 일정을 확인합니다.",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1419",
+  "theme_color": "#0f1419",
+  "icons": [
+    {
+      "src": "icons/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

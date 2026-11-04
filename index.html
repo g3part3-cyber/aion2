@@ -262,6 +262,77 @@
         .p-modal-body::-webkit-scrollbar { width: 6px; }
         .p-modal-body::-webkit-scrollbar-thumb { background: var(--accent-gold); border-radius: 3px; }
         .p-modal-body::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+
+        /* ========================================================
+           아티팩트 / 일정 패널 (고정 앱 규격 내부 스크롤)
+           ======================================================== */
+        .tab-btn { padding: 15px 2px; font-size: 12px; white-space: nowrap; }
+
+        .info-panel {
+            display: none;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 10px;
+            box-sizing: border-box;
+            color: #fff;
+            font-size: 13px;
+            background: linear-gradient(rgba(15,20,25,0.9), rgba(15,20,25,0.95));
+        }
+        .info-panel::-webkit-scrollbar { width: 6px; }
+        .info-panel::-webkit-scrollbar-thumb { background: var(--accent-gold); border-radius: 3px; }
+        .info-panel h2 { font-size: 18px; margin-bottom: 8px; text-align: center; }
+        .info-sub { color: #9aa5ad; font-size: 11px; text-align: center; margin-bottom: 8px; }
+        .info-msg { text-align: center; padding: 30px 0; color: #9aa5ad; }
+        .info-msg.err { color: var(--color-error); }
+
+        .mini-btn {
+            background: var(--btn-gray); color: var(--accent-gold);
+            border: 1px solid rgba(224,205,171,0.5); border-radius: var(--border-radius);
+            padding: 4px 10px; font-size: 12px; cursor: pointer;
+        }
+        .mini-btn:hover { filter: brightness(1.3); }
+
+        .af-versus { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; }
+        .af-side { flex: 1; text-align: center; padding: 8px 4px; border-radius: 4px; background: rgba(0,0,0,0.45); border: 1px solid rgba(224,205,171,0.25); }
+        .af-side.me { border-color: var(--color-success); }
+        .af-side b { display: block; font-size: 15px; }
+        .af-side span { font-size: 22px; font-weight: bold; color: var(--accent-gold); }
+        .af-vs { color: #7f8c8d; font-weight: bold; }
+        .af-layer { margin-bottom: 8px; background: rgba(0,0,0,0.4); border: 1px solid rgba(224,205,171,0.2); border-radius: 4px; padding: 6px 8px; }
+        .af-layer-title { color: var(--accent-gold); font-weight: bold; margin-bottom: 4px; display: flex; justify-content: space-between; }
+        .af-layer-title small { color: #9aa5ad; font-weight: normal; }
+        .af-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-top: 1px solid rgba(255,255,255,0.06); }
+        .af-badge { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+        .af-badge.mine { background: rgba(41,128,185,0.35); color: var(--color-success); border: 1px solid var(--color-success); }
+        .af-badge.enemy { background: rgba(192,57,43,0.3); color: var(--color-error); border: 1px solid var(--color-error); }
+        .af-badge.none { background: rgba(127,140,141,0.25); color: #aaa; border: 1px solid #7f8c8d; }
+        .af-next { text-align: center; padding: 6px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent-gold); border-radius: 4px; margin-bottom: 8px; }
+
+        .sc-hero { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .sc-dow { width: 42px; height: 42px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold; color: #7be0a0; background: rgba(39,174,96,0.25); border: 1px solid #2f7a4f; border-radius: 8px; }
+        .sc-hero-text { flex: 1; min-width: 0; }
+        .sc-hero-text b { display: block; font-size: 16px; color: #fff; }
+        .sc-hero-text small { color: #9aa5ad; font-size: 11px; }
+        .sc-nav { display: flex; gap: 4px; }
+        .sc-countdown { text-align: center; padding: 8px; margin-bottom: 8px; border: 1px dashed rgba(224,205,171,0.45); border-radius: 8px; background: rgba(0,0,0,0.35); }
+        .sc-clock { font-size: 11px; color: #9aa5ad; font-variant-numeric: tabular-nums; }
+        .sc-next-label { color: var(--accent-gold); font-size: 12px; margin-top: 2px; }
+        .sc-remain { font-size: 26px; font-weight: bold; color: #fff; font-variant-numeric: tabular-nums; min-height: 32px; }
+        .sc-remain small { font-size: 12px; color: var(--accent-gold); margin: 0 2px; }
+        .sc-filters { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+        .sc-chip { padding: 2px 8px; border-radius: 10px; font-size: 11px; cursor: pointer; background: rgba(0,0,0,0.5); color: #aaa; border: 1px solid #555; }
+        .sc-chip.active { color: #000; background: var(--accent-gold); border-color: var(--accent-gold); }
+        .sc-row { display: flex; align-items: center; gap: 6px; padding: 9px 10px; margin-bottom: 6px; background: rgba(0,0,0,0.45); border: 1px dashed rgba(224,205,171,0.25); border-radius: 8px; }
+        .sc-row.next { background: rgba(224,205,171,0.14); border-color: var(--accent-gold); }
+        .sc-row.live { border-color: var(--color-success); }
+        .sc-names { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-weight: bold; font-size: 14px; }
+        .sc-ev { white-space: nowrap; }
+        .sc-end { color: #9aa5ad; font-weight: normal; margin-left: 4px; font-size: 10px; }
+        .sc-plus { color: #7f8c8d; }
+        .sc-badge { font-size: 10px; background: var(--accent-gold); color: #000; border-radius: 9px; padding: 1px 7px; font-weight: bold; }
+        .sc-time { font-weight: bold; font-size: 16px; color: var(--accent-gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .sc-row.live .sc-time { color: var(--color-success); font-size: 13px; }
     </style>
 </head>
 <body>
@@ -270,7 +341,9 @@
         <button id="btn-ludra"   class="tab-btn active" onclick="switchTab('ludra', 2700)" aria-selected="true">비탄의설원</button>
         <button id="btn-chimsik" class="tab-btn"         onclick="switchTab('chimsik', 3500)" aria-selected="false">침식된</button>
         <button id="btn-muspell" class="tab-btn"         onclick="switchTab('muspell', 4300)" aria-selected="false">무스펠</button>
-    </div>
+                <button id="btn-artifact" class="tab-btn"        onclick="switchTab('artifact')" aria-selected="false">아티팩트</button>
+                <button id="btn-schedule" class="tab-btn"        onclick="switchTab('schedule')" aria-selected="false">일일일정</button>
+            </div>
 
     <div id="main-area" class="main-content bg-ludra" role="region" aria-label="성역 정보 조회 영역">
         <h2 id="title">⚔ 비탄의설원</h2>
@@ -306,6 +379,18 @@
         <button class="action-btn btn-participants" onclick="toggleParticipantsModal()" aria-label="이번 주 참여자 명단 보기">👥 참여자 보기</button>
 
         <div id="result-display" role="status" aria-live="polite">캐릭터명을 조회해 주세요.</div>
+    </div>
+
+    <!-- 아티팩트 점령현황 패널 -->
+    <div id="artifact-area" class="info-panel" role="region" aria-label="아티팩트 점령현황">
+        <h2>🏛 아티팩트 점령현황</h2>
+        <div id="artifact-body" class="info-msg">불러오는 중...</div>
+    </div>
+
+    <!-- 일일 스케줄 패널 -->
+    <div id="schedule-area" class="info-panel" role="region" aria-label="일일 스케줄">
+        <h2>📅 일일 스케줄</h2>
+        <div id="schedule-body" class="info-msg">불러오는 중...</div>
     </div>
 
     <!-- 달력 모달 -->
@@ -463,14 +548,21 @@ function switchTab(type, lv) {
 
     state.currentTab = type;
 
-    $("main-area").className = "main-content " + CONFIG.tabBgClasses[type];
-    $("title").innerText     = CONFIG.tabTitles[type];
-
-    ["ludra", "chimsik", "muspell"].forEach((t) => {
+    ["ludra", "chimsik", "muspell", "artifact", "schedule"].forEach((t) => {
         const btn = $("btn-" + t);
         btn.classList.toggle("active", t === type);
         btn.setAttribute("aria-selected", t === type ? "true" : "false"); 
     });
+
+    const isInfoTab = type === "artifact" || type === "schedule";
+    $("main-area").style.display      = isInfoTab ? "none" : "";
+    $("artifact-area").style.display  = type === "artifact" ? "block" : "none";
+    $("schedule-area").style.display  = type === "schedule" ? "block" : "none";
+    if (type === "artifact") return loadArtifact();
+    if (type === "schedule") return loadSchedule();
+
+    $("main-area").className = "main-content " + CONFIG.tabBgClasses[type];
+    $("title").innerText     = CONFIG.tabTitles[type];
 
     syncTabUi(type);
     $("raid-time").selectedIndex = 0;
@@ -730,6 +822,227 @@ function renderParticipantsData(data) {
     
     pBody.innerText = textOutput;
 }
+
+/** ========================================================
+  * 카사카 서버 전용: 아티팩트 점령현황 / 일일 스케줄
+  * ======================================================== */
+const KASAKA = { id: 1015, name: "카사카" };
+const ARTIFACT_URL = "https://raw.githubusercontent.com/Not4You-Dev/NotMeter-Cache/main/presence/notmeter-artifact-occupation-public.json";
+const SCHEDULE_URL = `https://sagye.kr/api/schedule?server=${KASAKA.id}`;
+const ARTIFACT_NAMES = {
+    1: [[1001, "에레슈란타의 뿌리"], [1002, "유황나무섬"], [1003, "시엘의 날개 군도"]],
+    2: [[2001, "침식된 중앙섬"], [2002, "오염된 늪지"], [2003, "뒤틀린 고목나무 숲"]],
+};
+const SCHEDULE_CATEGORIES = {
+    boss:  { label: "보스",   color: "#e67e22" },
+    festa: { label: "페스타", color: "#f1c40f" },
+    rift:  { label: "균열",   color: "#9b59b6" },
+    pvp:   { label: "PvP",    color: "#e74c3c" },
+    trade: { label: "무역",   color: "#2ecc71" },
+    abyss: { label: "어비스", color: "#3498db" },
+};
+const infoCache = {};
+
+const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const kstTime = (ms) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false }).format(ms);
+const kstDateTime = (ms) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(ms);
+
+// sagye.kr 은 CORS 헤더가 없어 직접 요청이 막히면 프록시로 재시도
+async function fetchJson(url, useProxyFallback) {
+    const attempt = async (u) => {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
+        try {
+            const res = await fetch(u, { signal: controller.signal, cache: "no-store" });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+        } finally {
+            clearTimeout(timer);
+        }
+    };
+    try {
+        return await attempt(url);
+    } catch (e) {
+        if (!useProxyFallback) throw e;
+        return attempt("https://api.allorigins.win/raw?url=" + encodeURIComponent(url));
+    }
+}
+
+async function cachedJson(key, url, useProxyFallback, ttlMs = 60000) {
+    const hit = infoCache[key];
+    if (hit && Date.now() - hit.at < ttlMs) return hit.data;
+    const data = await fetchJson(url, useProxyFallback);
+    infoCache[key] = { at: Date.now(), data };
+    return data;
+}
+
+async function loadArtifact() {
+    const body = $("artifact-body");
+    body.className = "info-msg";
+    body.textContent = "불러오는 중...";
+    try {
+        const data = await cachedJson("artifact", ARTIFACT_URL, false);
+        const pair = (data.pairs || []).find((p) => p.west?.serverId === KASAKA.id || p.east?.serverId === KASAKA.id);
+        if (!pair) throw new Error("카사카 서버 대진 정보를 찾을 수 없습니다.");
+        renderArtifact(pair);
+    } catch (e) {
+        body.className = "info-msg err";
+        body.innerHTML = `데이터 로드 실패<br><button class="mini-btn" style="margin-top:10px" onclick="delete infoCache.artifact; loadArtifact()">다시 시도</button>`;
+    }
+}
+
+function renderArtifact(pair) {
+    const mySide = pair.west.serverId === KASAKA.id ? 1 : 2;
+    const enemy = mySide === 1 ? pair.east : pair.west;
+    let mine = 0, theirs = 0;
+
+    const layersHtml = [1, 2].map((n) => {
+        const layer = (pair.layers || []).find((l) => l.layer === n);
+        const owners = new Map((layer?.entries || []).map((e) => [e.artifactId, e.ownerSide]));
+        const rows = ARTIFACT_NAMES[n].map(([id, name]) => {
+            const owner = owners.get(id);
+            let cls = "none", text = "미확정";
+            if (owner === mySide) { cls = "mine"; text = `${KASAKA.name} 점령`; mine++; }
+            else if (owner === 1 || owner === 2) { cls = "enemy"; text = `${enemy.name} 점령`; theirs++; }
+            return `<div class="af-row"><span>${escHtml(name)}</span><span class="af-badge ${cls}">${text}</span></div>`;
+        }).join("");
+        const obs = layer?.observedAt ? `${kstTime(layer.observedAt * 1000)} 갱신` : "";
+        return `<div class="af-layer"><div class="af-layer-title"><span>${n === 1 ? "하층" : "중층"}</span><small>${obs}</small></div>${rows}</div>`;
+    }).join("");
+
+    $("artifact-body").className = "";
+    $("artifact-body").innerHTML = `
+        <div class="af-versus">
+            <div class="af-side me"><b>${KASAKA.name}</b><span>${mine}</span></div>
+            <div class="af-vs">VS</div>
+            <div class="af-side"><b>${escHtml(enemy.name)}</b><span>${theirs}</span></div>
+        </div>
+        <div class="af-next">다음 점령전<br><b style="color:var(--accent-gold)">${pair.nextBattleAt ? kstDateTime(pair.nextBattleAt) : "-"}</b></div>
+        ${layersHtml}
+        <div class="info-sub">출처: notmeter.com · 유저 제보 기반 · 수/토 점령전</div>
+        <div style="text-align:center"><button class="mini-btn" onclick="delete infoCache.artifact; loadArtifact()">🔄 새로고침</button></div>`;
+}
+
+const scheduleState = { data: null, date: null, category: "main" };
+
+async function loadSchedule() {
+    const body = $("schedule-body");
+    body.className = "info-msg";
+    body.textContent = "불러오는 중...";
+    try {
+        scheduleState.data = await cachedJson("schedule", SCHEDULE_URL, true);
+        if (!scheduleState.date) scheduleState.date = scheduleState.data.today;
+        renderSchedule();
+    } catch (e) {
+        body.className = "info-msg err";
+        body.innerHTML = `데이터 로드 실패<br><button class="mini-btn" style="margin-top:10px" onclick="delete infoCache.schedule; loadSchedule()">다시 시도</button>`;
+    }
+}
+
+function shiftScheduleDate(delta) {
+    const dates = [...new Set(scheduleState.data.occurrences.map((o) => o.date))].sort();
+    const idx = dates.indexOf(scheduleState.date) + delta;
+    if (idx >= 0 && idx < dates.length) {
+        scheduleState.date = dates[idx];
+        renderSchedule();
+    }
+}
+
+function setScheduleCategory(cat) {
+    scheduleState.category = cat;
+    renderSchedule();
+}
+
+const kstDateStr = (ms) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(ms);
+const kstClockStr = (ms) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(ms);
+const SCHEDULE_ICONS = { rift_portal: "🌀", kaira: "👹", agro: "🐲", artifact_occupation: "🏛", abyss_boss: "💀" };
+const SCHEDULE_DISPLAY = { artifact_occupation: "아티 점령전", abyss_boss: "어비스 보스" };
+const MAIN_CATEGORIES = ["boss", "rift", "abyss"];
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function renderSchedule() {
+    const { data, date, category } = scheduleState;
+    const now = Date.now();
+    const isToday = date === kstDateStr(now);
+    const pick = (o) => !o.cancelled
+        && (category === "all" || (category === "main" ? MAIN_CATEGORIES.includes(o.category) : o.category === category))
+        && (!isToday || (o.endAt ? o.endAt > now : o.startAt > now));
+    const items = data.occurrences.filter((o) => o.date === date && pick(o)).sort((a, b) => a.startAt - b.startAt);
+
+    // 같은 시각의 일정은 '동시' 한 줄로 묶음
+    const groups = [];
+    for (const o of items) {
+        const last = groups[groups.length - 1];
+        if (last && last.startAt === o.startAt) last.items.push(o);
+        else groups.push({ startAt: o.startAt, items: [o] });
+    }
+    const nextGroup = groups.find((g) => g.startAt > now);
+    scheduleState.expireAt = isToday
+        ? Math.min(...items.map((o) => (o.endAt && o.endAt > now ? o.endAt : o.startAt)).filter((t) => t > now), Infinity)
+        : Infinity;
+    scheduleState.nextAt = nextGroup && isToday ? nextGroup.startAt : null;
+    scheduleState.nextName = nextGroup ? nextGroup.items.map((o) => SCHEDULE_DISPLAY[o.definitionId] || o.name).join(" + ") : "";
+
+    const wd = WEEKDAYS[new Date(date + "T00:00:00Z").getUTCDay()];
+    const chips = [["main", "주요"], ["all", "전체"], ...Object.entries(SCHEDULE_CATEGORIES).map(([k, v]) => [k, v.label])]
+        .map(([k, label]) => `<span class="sc-chip ${k === category ? "active" : ""}" onclick="setScheduleCategory('${k}')">${label}</span>`)
+        .join("");
+
+    const rows = groups.map((g) => {
+        const multi = g.items.length > 1;
+        const cat = SCHEDULE_CATEGORIES[g.items[0].category] || { color: "#7f8c8d" };
+        const names = g.items.map((o) => {
+            const icon = SCHEDULE_ICONS[o.definitionId] || "";
+            const end = o.endAt ? `<small class="sc-end">~${kstTime(o.endAt)}</small>` : "";
+            return `<span class="sc-ev">${icon} ${escHtml(SCHEDULE_DISPLAY[o.definitionId] || o.name)}${end}</span>`;
+        }).join('<span class="sc-plus">+</span>');
+        const isNext = g === nextGroup && isToday;
+        const live = g.startAt <= now;
+        return `<div class="sc-row ${isNext ? "next" : ""} ${live ? "live" : ""}" style="--c:${cat.color}">
+            ${multi ? '<span class="sc-badge">동시</span>' : ""}<span class="sc-names">${names}</span>
+            <span class="sc-time">${live ? "진행중" : kstTime(g.startAt)}</span></div>`;
+    }).join("") || `<div class="info-msg">남은 일정이 없습니다.</div>`;
+
+    $("schedule-body").className = "";
+    $("schedule-body").innerHTML = `
+        <div class="sc-hero">
+            <div class="sc-dow">${wd}</div>
+            <div class="sc-hero-text"><b>${wd}요일 일정${isToday ? " · 오늘" : ""}</b>
+                <small>${escHtml(data.serverName)} · ${date} · 남은 ${groups.length}건</small></div>
+            <div class="sc-nav"><button class="mini-btn" onclick="shiftScheduleDate(-1)">◀</button><button class="mini-btn" onclick="shiftScheduleDate(1)">▶</button></div>
+        </div>
+        <div class="sc-countdown">
+            <div id="sc-clock" class="sc-clock"></div>
+            <div id="sc-next-label" class="sc-next-label"></div>
+            <div id="sc-remain" class="sc-remain"></div>
+        </div>
+        <div class="sc-filters">${chips}</div>
+        ${rows}
+        <div class="info-sub" style="margin-top:8px">출처: sagye.kr · KST · <span style="cursor:pointer;text-decoration:underline" onclick="delete infoCache.schedule; loadSchedule()">새로고침</span></div>`;
+    tickClock();
+}
+
+function tickClock() {
+    const clock = $("sc-clock");
+    if (!clock) return;
+    const now = Date.now();
+    clock.textContent = `현재 ${kstClockStr(now)}`;
+    const { nextAt, nextName, expireAt } = scheduleState;
+    if (nextAt) {
+        const s = Math.max(0, Math.floor((nextAt - now) / 1000));
+        const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+        $("sc-next-label").textContent = `${kstTime(nextAt)} ${nextName}까지`;
+        $("sc-remain").innerHTML = (h ? `${h}<small>시간</small> ` : "") + `${m}<small>분</small> ${String(sec).padStart(2, "0")}<small>초</small>`;
+    } else {
+        $("sc-next-label").textContent = scheduleState.date === kstDateStr(now) ? "오늘 남은 일정 없음" : "";
+        $("sc-remain").textContent = "";
+    }
+    if (expireAt && expireAt <= now) renderSchedule();
+}
+
+setInterval(() => {
+    if (state.currentTab === "schedule" && scheduleState.data) tickClock();
+}, 1000);
 </script>
 </body>
 </html>

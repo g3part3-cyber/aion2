@@ -359,6 +359,12 @@
         .sc-notify { width: 28px; height: 28px; padding: 0; flex: none; border: 1px solid #66737b; border-radius: 50%; background: rgba(0,0,0,0.35); color: #aab4ba; cursor: pointer; font-size: 14px; }
         .sc-notify.selected { background: rgba(224,205,171,0.2); color: var(--accent-gold); border-color: var(--accent-gold); }
         .sc-notify:hover { filter: brightness(1.3); }
+        #pwa-install-button {
+            display: none; position: fixed; right: 16px; bottom: 16px; z-index: 500;
+            padding: 10px 14px; border: 1px solid var(--accent-gold); border-radius: 20px;
+            background: #18242d; color: var(--accent-gold); font-weight: bold; cursor: pointer;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.5);
+        }
     </style>
 </head>
 <body>
@@ -440,6 +446,7 @@
         <div id="participants-body" class="p-modal-body">조회 중...</div>
     </div>
 </div>
+<button id="pwa-install-button" type="button" aria-label="성역 관리 앱 설치">📲 앱 설치</button>
 
 <script>
 const CONFIG = {
@@ -1186,6 +1193,35 @@ function tickClock() {
 setInterval(() => {
     if (state.currentTab === "schedule" && scheduleState.data) tickClock();
 }, 1000);
+
+let deferredInstallPrompt = null;
+const pwaInstallButton = $("pwa-install-button");
+
+if (!window.matchMedia("(display-mode: standalone)").matches) {
+    pwaInstallButton.style.display = "block";
+}
+
+window.addEventListener("beforeinstallprompt", (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    pwaInstallButton.style.display = "block";
+});
+
+pwaInstallButton.addEventListener("click", async () => {
+    if (!deferredInstallPrompt) {
+        alert("Chrome 또는 Edge 메뉴에서 '앱 설치' 또는 '홈 화면에 추가'를 선택해 주세요. iPhone은 Safari 공유 메뉴에서 '홈 화면에 추가'를 선택합니다.");
+        return;
+    }
+
+    pwaInstallButton.style.display = "none";
+    await deferredInstallPrompt.prompt();
+    deferredInstallPrompt = null;
+});
+
+window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    pwaInstallButton.style.display = "none";
+});
 
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "aion2-shell-v1";
+const CACHE_NAME = "aion2-shell-v2";
 const APP_SHELL = [
     "./",
     "./index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
     "./service-worker.js",
     "./icons/app-icon.svg",
     "./icons/app-icon-180.png",
+    "./icons/app-icon-192.png",
     "./icons/app-icon-512.png",
     "./bg_ludra.png",
     "./bg_main.png",

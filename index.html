@@ -986,7 +986,9 @@ const kstClockStr = (ms) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/S
 function syncScheduleToday() {
     const today = kstDateStr(Date.now());
     if (today === scheduleState.today) return false;
-    if (!scheduleState.date || scheduleState.date === scheduleState.today) scheduleState.date = today;
+    if (!scheduleState.today || !scheduleState.date || scheduleState.date === scheduleState.today) {
+        scheduleState.date = today;
+    }
     scheduleState.today = today;
     return true;
 }
@@ -1148,6 +1150,7 @@ async function toggleScheduleNotice(definitionIds) {
 }
 
 function renderSchedule() {
+    syncScheduleToday();
     const { data, date, category } = scheduleState;
     const now = Date.now();
     const isToday = date === kstDateStr(now);

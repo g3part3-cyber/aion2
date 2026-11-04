@@ -391,8 +391,6 @@
             </select>
         </div>
 
-        <div id="try-area" class="status-badge" style="display: none;">ℹ️ 조회 시 클리어 기록에 따라 완숙/트라이 자동 판정</div>
-
         <div id="diff-area" style="display: none;">
             <select id="difficulty" onchange="resetSelection()" aria-label="난이도 선택">
                 <option value="쉬움">난이도: 쉬움 (Lv 5800↑)</option>
@@ -500,7 +498,7 @@ const CONFIG = {
             dateM:      "entry.1568093931_month",
             dateD:      "entry.1568093931_day",
             time:       "entry.371015671",
-            difficulty: "entry.1920727946", 
+            difficulty: null,
         },
         muspell: {
             name:       "entry.1885401070",
@@ -516,12 +514,12 @@ const CONFIG = {
     },
     alertMessages: {
         ludra:   (name, tab, diff, time) => `${name}님 [${tab} - ${diff}] (${time}) 신청 완료!`,
-        chimsik: (name, tab, type, time) => `${name}님 [${tab} - ${type}] (${time}) 신청 완료!`,
+        chimsik: (name, tab, time) => `${name}님 [${tab}] (${time}) 신청 완료!`,
         muspell: (name, tab, diff, time) => `${name}님 [${tab} - ${diff}] (${time}) 신청 완료!`,
     },
     successTitles: {
         ludra:   "▶ 조회 성공 ◀",
-        chimsik: (isCleared) => isCleared ? "▶ 완숙 신청 가능 ◀" : "▶ 트라이 신청 가능 ◀",
+        chimsik: "▶ 조회 성공 ◀",
         muspell: "▶ 조회 성공 ◀",
     },
 };
@@ -569,8 +567,6 @@ function getRequiredLv(tab) {
 function syncTabUi(type) {
     const hasDifficulty = Boolean(getDifficultyOptions(type));
     $("diff-area").style.display = hasDifficulty ? "block" : "none";
-    $("try-area").style.display  = (type === "chimsik") ? "block" : "none";
-
     if (hasDifficulty) {
         renderDifficultyOptions(type);
     }
@@ -648,21 +644,18 @@ async function fetchData() {
 
         const requiredLv = getRequiredLv(state.currentTab);
 
-        const isCleared = String(user[6] || "").trim().toUpperCase() === "O";
-
         if (charLv >= requiredLv) {
             state.selectedChar = {
                 name:     user[0],
                 class:    user[1],
                 power:    displayPower,
                 lv:       charLv,
-                type: (state.currentTab === "chimsik") ? (isCleared ? "완숙" : "트라이") : null,
             };
 
             resDiv.style.color = "#4da6ff";
 
             const successTitleFn = CONFIG.successTitles[state.currentTab];
-            const titleText = typeof successTitleFn === "function" ? successTitleFn(isCleared) : successTitleFn;
+            const titleText = typeof successTitleFn === "function" ? successTitleFn() : successTitleFn;
 
             resDiv.innerText =
                 `${titleText}\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
@@ -703,8 +696,7 @@ async function submitData() {
     formData.append(entries.time, selectedTime);
 
     if (entries.difficulty !== null) {
-        const diffVal = (tab === "chimsik") ? state.selectedChar.type : $("difficulty").value;
-        formData.append(entries.difficulty, diffVal);
+        formData.append(entries.difficulty, $("difficulty").value);
     }
 
     try {
@@ -716,7 +708,7 @@ async function submitData() {
         if (tab === "muspell" || tab === "ludra") {
             alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], $("difficulty").value, selectedTime);
         } else if (tab === "chimsik") {
-            alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], state.selectedChar.type, selectedTime);
+            alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], selectedTime);
         } else {
             alertMsg = msgFn(state.selectedChar.name, CONFIG.tabNames[tab], selectedTime);
         }

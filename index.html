@@ -930,7 +930,10 @@ async function loadSchedule() {
     body.className = "info-msg";
     body.textContent = "불러오는 중...";
     try {
-        scheduleState.data = await cachedJson("schedule", SCHEDULE_URL, true);
+        // 같은 사이트의 schedule.json(Actions가 갱신)을 우선 사용하고, 없으면 원본 API 시도
+        scheduleState.data = await cachedJson("schedule", "./schedule.json", false)
+            .catch(() => cachedJson("schedule", SCHEDULE_URL, true));
+        if (!scheduleState.data?.occurrences) throw new Error("invalid schedule");
         if (!scheduleState.date) scheduleState.date = scheduleState.data.today;
         renderSchedule();
     } catch (e) {

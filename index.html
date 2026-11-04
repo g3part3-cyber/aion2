@@ -988,8 +988,19 @@ const SCHEDULE_DISPLAY = { artifact_occupation: "아티 점령전", abyss_boss: 
 const MAIN_CATEGORIES = ["boss", "rift", "abyss"];
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const NOTICE_SELECTION_KEY = "aion2-schedule-notice-definitions";
-const NOTICE_FIRED_KEY = "aion2-schedule-notice-fired";
 const NOTICE_LEAD_MS = 5 * 60 * 1000;
+const PUSH_API_URL = "https://aion2-push.g3part3-aion.workers.dev";
+const pushConfigPromise = PUSH_API_URL
+    ? fetch(`${PUSH_API_URL}/config`).then(async (response) => {
+        if (!response.ok) throw new Error(`푸시 설정 조회 실패 (HTTP ${response.status})`);
+        const config = await response.json();
+        if (!config.vapidPublicKey) throw new Error("푸시 공개 키가 설정되지 않았습니다.");
+        return config;
+    }).catch((error) => {
+        console.error("푸시 서버 연결 실패:", error);
+        return null;
+    })
+    : Promise.resolve(null);
 
 function getNoticeSelections() {
     try {
@@ -1015,81 +1026,79 @@ async function enableScheduleNotifications() {
         return;
     }
 
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-        alert("알림이 허용되지 않았습니다. 브라우저 또는 휴대폰 설정에서 이 사이트의 알림을 허용해 주세요.");
+    try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+            alert("알림이 허용되지 않았습니다. 브라우저 또는 휴대폰 설정에서 이 사이트의 알림을 허용해 주세요.");
+        }
+    } catch (error) {
+        console.error("알림 권한 요청 실패:", error);
+        alert("알림 권한 요청에 실패했습니다. 브라우저 또는 휴대폰 설정을 확인해 주세요.");
     }
     renderSchedule();
 }
 
-function toggleScheduleNotice(definitionIds) {
-    if (notificationStatus() !== "granted") {
-        enableScheduleNotifications();
+function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+}
+
+async function syncSchedulePushSubscription(selections) {
+    if (!PUSH_API_URL) throw new Error("푸시 서버 주소가 아직 설정되지 않았습니다.");
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        throw new Error("이 브라우저는 백그라운드 푸시 알림을 지원하지 않습니다.");
+    }
+
+    await navigator.serviceWorker.register("./service-worker.js");
+    const registration = await navigator.serviceWorker.ready;
+    const existing = await registration.pushManager.getSubscription();
+    if (!selections.size) {
+        if (existing) {
+            const response = await fetch(`${PUSH_API_URL}/subscribe`, {
+                method: "DELETE",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ endpoint: existing.endpoint }),
+            });
+            if (!response.ok) throw new Error(`푸시 구독 해제 실패 (HTTP ${response.status})`);
+            await existing.unsubscribe();
+        }
         return;
+    }
+
+    const config = await pushConfigPromise;
+    if (!config) throw new Error("푸시 서버에 연결할 수 없습니다. 주소와 서버 설정을 확인해 주세요.");
+    const subscription = existing || await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(config.vapidPublicKey),
+    });
+    const response = await fetch(`${PUSH_API_URL}/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            subscription: subscription.toJSON(),
+            definitionIds: [...selections],
+        }),
+    });
+    if (!response.ok) throw new Error(`푸시 구독 저장 실패 (HTTP ${response.status})`);
+}
+
+async function toggleScheduleNotice(definitionIds) {
+    if (notificationStatus() !== "granted") {
+        await enableScheduleNotifications();
+        if (notificationStatus() !== "granted") return;
     }
 
     const selections = getNoticeSelections();
     const allSelected = definitionIds.every((id) => selections.has(id));
     definitionIds.forEach((id) => allSelected ? selections.delete(id) : selections.add(id));
-    saveNoticeSelections(selections);
-    renderSchedule();
-}
-
-async function showScheduleNotification(title, body, tag) {
-    const registration = await navigator.serviceWorker?.ready;
-    if (registration) {
-        await registration.showNotification(title, {
-            body,
-            tag,
-            icon: "./icons/app-icon-180.png",
-            badge: "./icons/app-icon-180.png",
-            renotify: false,
-        });
-        return;
-    }
-    new Notification(title, { body, tag, icon: "./icons/app-icon-180.png" });
-}
-
-function checkScheduleNotifications(now) {
-    if (notificationStatus() !== "granted" || !scheduleState.data) return;
-
-    const selections = getNoticeSelections();
-    if (!selections.size) return;
-
-    let fired;
     try {
-        fired = new Set(JSON.parse(localStorage.getItem(NOTICE_FIRED_KEY) || "[]"));
+        await syncSchedulePushSubscription(selections);
+        saveNoticeSelections(selections);
+        renderSchedule();
     } catch (error) {
-        console.error("발송한 알림 기록을 읽지 못했습니다:", error);
-        fired = new Set();
-    }
-
-    let changed = false;
-    for (const occurrence of scheduleState.data.occurrences) {
-        if (occurrence.cancelled || !selections.has(occurrence.definitionId)) continue;
-
-        const notices = [
-            { at: occurrence.startAt - NOTICE_LEAD_MS, label: "5분 전" },
-            { at: occurrence.startAt, label: "시작" },
-        ];
-        for (const notice of notices) {
-            const key = `${occurrence.occurrenceId}:${notice.label}`;
-            if (fired.has(key) || now < notice.at || now - notice.at > 60000) continue;
-
-            const name = SCHEDULE_DISPLAY[occurrence.definitionId] || occurrence.name;
-            showScheduleNotification(
-                notice.label === "5분 전" ? `🔔 ${name} 5분 전` : `🔔 ${name} 시작`,
-                notice.label === "5분 전" ? `${kstTime(occurrence.startAt)}에 시작합니다.` : "지금 시작합니다.",
-                key
-            ).catch((error) => console.error("일정 알림 발송 실패:", error));
-            fired.add(key);
-            changed = true;
-        }
-    }
-
-    if (changed) {
-        const recent = [...fired].slice(-200);
-        localStorage.setItem(NOTICE_FIRED_KEY, JSON.stringify(recent));
+        console.error("일정 푸시 알림 설정 실패:", error);
+        alert(`알림 설정을 저장하지 못했습니다: ${error.message}`);
     }
 }
 
@@ -1154,8 +1163,8 @@ function renderSchedule() {
             <div id="sc-remain" class="sc-remain"></div>
         </div>
         <div class="sc-notice-bar">
-            <span class="sc-notice-text ${notificationStatus() === "granted" ? "enabled" : ""}">${notificationStatus() === "granted" ? "🔔 선택 일정: 5분 전 · 시작 알림" : "🔕 알림 권한이 필요합니다"}</span>
-            ${notificationStatus() === "granted" ? "" : '<button class="mini-btn" onclick="enableScheduleNotifications()">알림 허용</button>'}
+            <span class="sc-notice-text ${notificationStatus() === "granted" && PUSH_API_URL ? "enabled" : ""}">${!PUSH_API_URL ? "🔕 푸시 서버 설정이 필요합니다" : notificationStatus() === "granted" ? "🔔 선택 일정: 5분 전 · 시작 푸시 알림" : "🔕 알림 권한이 필요합니다"}</span>
+            ${notificationStatus() === "granted" || !PUSH_API_URL ? "" : '<button class="mini-btn" onclick="enableScheduleNotifications()">알림 허용</button>'}
         </div>
         <div class="sc-filters">${chips}</div>
         ${rows}
@@ -1167,7 +1176,6 @@ function tickClock() {
     const clock = $("sc-clock");
     if (!clock) return;
     const now = Date.now();
-    checkScheduleNotifications(now);
     clock.textContent = `현재 ${kstClockStr(now)}`;
     const { nextAt, nextName, expireAt } = scheduleState;
     if (nextAt) {

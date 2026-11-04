@@ -1,0 +1,24 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "aion2-push",
+	"main": "src/index.js",
+	"compatibility_date": "2026-11-04",
+	"workers_dev": true,
+	"triggers": {
+		"crons": [
+			"* * * * *"
+		]
+	},
+	"kv_namespaces": [
+		{
+			"binding": "PUSH_DATA",
+			"id": "2e14dc53ba0f40309496f2185fbe87a1",
+			"remote": true
+		}
+	],
+	"vars": {
+		"ALLOWED_ORIGIN": "https://g3part3-cyber.github.io",
+		"SCHEDULE_URL": "https://g3part3-cyber.github.io/aion2/schedule.json",
+		"VAPID_SUBJECT": "mailto:g3part3@gmail.com"
+	}
+}

@@ -997,17 +997,7 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const NOTICE_SELECTION_KEY = "aion2-schedule-notice-definitions";
 const NOTICE_LEAD_MS = 5 * 60 * 1000;
 const PUSH_API_URL = "https://aion2-push.g3part3-aion.workers.dev";
-const pushConfigPromise = PUSH_API_URL
-    ? fetch(`${PUSH_API_URL}/config`).then(async (response) => {
-        if (!response.ok) throw new Error(`푸시 설정 조회 실패 (HTTP ${response.status})`);
-        const config = await response.json();
-        if (!config.vapidPublicKey) throw new Error("푸시 공개 키가 설정되지 않았습니다.");
-        return config;
-    }).catch((error) => {
-        console.error("푸시 서버 연결 실패:", error);
-        return null;
-    })
-    : Promise.resolve(null);
+let schedulePushSyncStatus = "idle";
 
 function getNoticeSelections() {
     try {
@@ -1051,6 +1041,33 @@ function urlBase64ToUint8Array(base64String) {
     return Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
 }
 
+function hasCurrentPushApplicationKey(subscription, publicKey) {
+    const currentKey = subscription.options?.applicationServerKey;
+    if (!currentKey) return false;
+    const currentBytes = new Uint8Array(currentKey);
+    const configuredBytes = urlBase64ToUint8Array(publicKey);
+    return currentBytes.length === configuredBytes.length
+        && currentBytes.every((byte, index) => byte === configuredBytes[index]);
+}
+
+async function removePushSubscription(subscription) {
+    const response = await fetch(`${PUSH_API_URL}/subscribe`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subscription.endpoint }),
+    });
+    if (!response.ok) throw new Error(`푸시 구독 삭제 실패 (HTTP ${response.status})`);
+    if (!await subscription.unsubscribe()) throw new Error("기존 푸시 구독을 해제하지 못했습니다.");
+}
+
+async function loadPushConfig() {
+    const response = await fetch(`${PUSH_API_URL}/config`);
+    if (!response.ok) throw new Error(`푸시 설정 조회 실패 (HTTP ${response.status})`);
+    const config = await response.json();
+    if (!config.vapidPublicKey) throw new Error("푸시 공개 키가 설정되지 않았습니다.");
+    return config;
+}
+
 async function syncSchedulePushSubscription(selections) {
     if (!PUSH_API_URL) throw new Error("푸시 서버 주소가 아직 설정되지 않았습니다.");
     if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -1059,26 +1076,23 @@ async function syncSchedulePushSubscription(selections) {
 
     await navigator.serviceWorker.register("./service-worker.js");
     const registration = await navigator.serviceWorker.ready;
-    const existing = await registration.pushManager.getSubscription();
+    let subscription = await registration.pushManager.getSubscription();
     if (!selections.size) {
-        if (existing) {
-            const response = await fetch(`${PUSH_API_URL}/subscribe`, {
-                method: "DELETE",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ endpoint: existing.endpoint }),
-            });
-            if (!response.ok) throw new Error(`푸시 구독 해제 실패 (HTTP ${response.status})`);
-            await existing.unsubscribe();
-        }
+        if (subscription) await removePushSubscription(subscription);
         return;
     }
 
-    const config = await pushConfigPromise;
-    if (!config) throw new Error("푸시 서버에 연결할 수 없습니다. 주소와 서버 설정을 확인해 주세요.");
-    const subscription = existing || await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(config.vapidPublicKey),
-    });
+    const config = await loadPushConfig();
+    if (subscription && !hasCurrentPushApplicationKey(subscription, config.vapidPublicKey)) {
+        await removePushSubscription(subscription);
+        subscription = null;
+    }
+    if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(config.vapidPublicKey),
+        });
+    }
     const response = await fetch(`${PUSH_API_URL}/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1088,6 +1102,26 @@ async function syncSchedulePushSubscription(selections) {
         }),
     });
     if (!response.ok) throw new Error(`푸시 구독 저장 실패 (HTTP ${response.status})`);
+}
+
+async function syncSavedSchedulePushSubscription() {
+    const selections = getNoticeSelections();
+    if (!selections.size || notificationStatus() !== "granted") {
+        schedulePushSyncStatus = "idle";
+        renderSchedule();
+        return;
+    }
+
+    schedulePushSyncStatus = "syncing";
+    renderSchedule();
+    try {
+        await syncSchedulePushSubscription(selections);
+        schedulePushSyncStatus = "synced";
+    } catch (error) {
+        console.error("저장된 푸시 구독 동기화 실패:", error);
+        schedulePushSyncStatus = "error";
+    }
+    renderSchedule();
 }
 
 async function toggleScheduleNotice(definitionIds) {
@@ -1100,12 +1134,16 @@ async function toggleScheduleNotice(definitionIds) {
     const allSelected = definitionIds.every((id) => selections.has(id));
     definitionIds.forEach((id) => allSelected ? selections.delete(id) : selections.add(id));
     try {
+        schedulePushSyncStatus = "syncing";
         await syncSchedulePushSubscription(selections);
         saveNoticeSelections(selections);
+        schedulePushSyncStatus = "synced";
         renderSchedule();
     } catch (error) {
         console.error("일정 푸시 알림 설정 실패:", error);
+        schedulePushSyncStatus = "error";
         alert(`알림 설정을 저장하지 못했습니다: ${error.message}`);
+        renderSchedule();
     }
 }
 
@@ -1170,13 +1208,17 @@ function renderSchedule() {
             <div id="sc-remain" class="sc-remain"></div>
         </div>
         <div class="sc-notice-bar">
-            <span class="sc-notice-text ${notificationStatus() === "granted" && PUSH_API_URL ? "enabled" : ""}">${!PUSH_API_URL ? "🔕 푸시 서버 설정이 필요합니다" : notificationStatus() === "granted" ? "🔔 선택 일정: 5분 전 · 시작 푸시 알림" : "🔕 알림 권한이 필요합니다"}</span>
+            <span class="sc-notice-text ${schedulePushSyncStatus === "synced" && selections.size ? "enabled" : ""}">${!PUSH_API_URL ? "🔕 푸시 서버 설정이 필요합니다" : notificationStatus() !== "granted" ? "🔕 알림 권한이 필요합니다" : schedulePushSyncStatus === "syncing" ? "🔄 푸시 연결 확인 중..." : schedulePushSyncStatus === "error" ? "⚠️ 푸시 연결 실패" : schedulePushSyncStatus === "synced" && selections.size ? "🔔 선택 일정 푸시 연결됨" : "🔔 일정별 알림을 선택해 주세요"}</span>
+            ${schedulePushSyncStatus === "error" ? '<button class="mini-btn" onclick="syncSavedSchedulePushSubscription()">재시도</button>' : ""}
             ${notificationStatus() === "granted" || !PUSH_API_URL ? "" : '<button class="mini-btn" onclick="enableScheduleNotifications()">알림 허용</button>'}
         </div>
         <div class="sc-filters">${chips}</div>
         ${rows}
         <div class="info-sub" style="margin-top:8px">출처: sagye.kr · KST · <span style="cursor:pointer;text-decoration:underline" onclick="delete infoCache.schedule; loadSchedule()">새로고침</span></div>`;
     tickClock();
+    if (schedulePushSyncStatus === "idle" && notificationStatus() === "granted" && getNoticeSelections().size) {
+        void syncSavedSchedulePushSubscription();
+    }
 }
 
 function tickClock() {

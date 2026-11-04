@@ -353,6 +353,12 @@
         .sc-badge { font-size: 10px; background: var(--accent-gold); color: #000; border-radius: 9px; padding: 1px 7px; font-weight: bold; }
         .sc-time { font-weight: bold; font-size: 16px; color: var(--accent-gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
         .sc-row.live .sc-time { color: var(--color-success); font-size: 13px; }
+        .sc-notice-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; padding: 6px 8px; background: rgba(0,0,0,0.42); border: 1px solid rgba(224,205,171,0.3); border-radius: 6px; }
+        .sc-notice-text { color: #b7c0c6; font-size: 11px; }
+        .sc-notice-text.enabled { color: var(--color-success); }
+        .sc-notify { width: 28px; height: 28px; padding: 0; flex: none; border: 1px solid #66737b; border-radius: 50%; background: rgba(0,0,0,0.35); color: #aab4ba; cursor: pointer; font-size: 14px; }
+        .sc-notify.selected { background: rgba(224,205,171,0.2); color: var(--accent-gold); border-color: var(--accent-gold); }
+        .sc-notify:hover { filter: brightness(1.3); }
     </style>
 </head>
 <body>
@@ -982,6 +988,111 @@ const SCHEDULE_ICONS = { rift_portal: "🌀", kaira: "👹", agro: "🐲", artif
 const SCHEDULE_DISPLAY = { artifact_occupation: "아티 점령전", abyss_boss: "어비스 보스" };
 const MAIN_CATEGORIES = ["boss", "rift", "abyss"];
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+const NOTICE_SELECTION_KEY = "aion2-schedule-notice-definitions";
+const NOTICE_FIRED_KEY = "aion2-schedule-notice-fired";
+const NOTICE_LEAD_MS = 5 * 60 * 1000;
+
+function getNoticeSelections() {
+    try {
+        return new Set(JSON.parse(localStorage.getItem(NOTICE_SELECTION_KEY) || "[]"));
+    } catch (error) {
+        console.error("알림 선택을 읽지 못했습니다:", error);
+        return new Set();
+    }
+}
+
+function saveNoticeSelections(selections) {
+    localStorage.setItem(NOTICE_SELECTION_KEY, JSON.stringify([...selections]));
+}
+
+function notificationStatus() {
+    if (!("Notification" in window)) return "unsupported";
+    return Notification.permission;
+}
+
+async function enableScheduleNotifications() {
+    if (!("Notification" in window)) {
+        alert("이 브라우저는 알림을 지원하지 않습니다.");
+        return;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+        alert("알림이 허용되지 않았습니다. 브라우저 또는 휴대폰 설정에서 이 사이트의 알림을 허용해 주세요.");
+    }
+    renderSchedule();
+}
+
+function toggleScheduleNotice(definitionIds) {
+    if (notificationStatus() !== "granted") {
+        enableScheduleNotifications();
+        return;
+    }
+
+    const selections = getNoticeSelections();
+    const allSelected = definitionIds.every((id) => selections.has(id));
+    definitionIds.forEach((id) => allSelected ? selections.delete(id) : selections.add(id));
+    saveNoticeSelections(selections);
+    renderSchedule();
+}
+
+async function showScheduleNotification(title, body, tag) {
+    const registration = await navigator.serviceWorker?.ready;
+    if (registration) {
+        await registration.showNotification(title, {
+            body,
+            tag,
+            icon: "./icons/app-icon-180.png",
+            badge: "./icons/app-icon-180.png",
+            renotify: false,
+        });
+        return;
+    }
+    new Notification(title, { body, tag, icon: "./icons/app-icon-180.png" });
+}
+
+function checkScheduleNotifications(now) {
+    if (notificationStatus() !== "granted" || !scheduleState.data) return;
+
+    const selections = getNoticeSelections();
+    if (!selections.size) return;
+
+    let fired;
+    try {
+        fired = new Set(JSON.parse(localStorage.getItem(NOTICE_FIRED_KEY) || "[]"));
+    } catch (error) {
+        console.error("발송한 알림 기록을 읽지 못했습니다:", error);
+        fired = new Set();
+    }
+
+    let changed = false;
+    for (const occurrence of scheduleState.data.occurrences) {
+        if (occurrence.cancelled || !selections.has(occurrence.definitionId)) continue;
+
+        const notices = [
+            { at: occurrence.startAt - NOTICE_LEAD_MS, label: "5분 전" },
+            { at: occurrence.startAt, label: "시작" },
+        ];
+        for (const notice of notices) {
+            const key = `${occurrence.occurrenceId}:${notice.label}`;
+            if (fired.has(key) || now < notice.at || now - notice.at > 60000) continue;
+
+            const name = SCHEDULE_DISPLAY[occurrence.definitionId] || occurrence.name;
+            showScheduleNotification(
+                notice.label === "5분 전" ? `🔔 ${name} 5분 전` : `🔔 ${name} 시작`,
+                notice.label === "5분 전" ? `${kstTime(occurrence.startAt)}에 시작합니다.` : "지금 시작합니다.",
+                key
+            ).catch((error) => console.error("일정 알림 발송 실패:", error));
+            fired.add(key);
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        const recent = [...fired].slice(-200);
+        localStorage.setItem(NOTICE_FIRED_KEY, JSON.stringify(recent));
+    }
+}
 
 function renderSchedule() {
     const { data, date, category } = scheduleState;
@@ -1011,9 +1122,12 @@ function renderSchedule() {
         .map(([k, label]) => `<span class="sc-chip ${k === category ? "active" : ""}" onclick="setScheduleCategory('${k}')">${label}</span>`)
         .join("");
 
+    const selections = getNoticeSelections();
     const rows = groups.map((g) => {
         const multi = g.items.length > 1;
         const cat = SCHEDULE_CATEGORIES[g.items[0].category] || { color: "#7f8c8d" };
+        const definitionIds = [...new Set(g.items.map((o) => o.definitionId))];
+        const selected = definitionIds.every((id) => selections.has(id));
         const names = g.items.map((o) => {
             const icon = SCHEDULE_ICONS[o.definitionId] || "";
             const end = o.endAt ? `<small class="sc-end">~${kstTime(o.endAt)}</small>` : "";
@@ -1023,6 +1137,7 @@ function renderSchedule() {
         const live = g.startAt <= now;
         return `<div class="sc-row ${isNext ? "next" : ""} ${live ? "live" : ""}" style="--c:${cat.color}">
             ${multi ? '<span class="sc-badge">동시</span>' : ""}<span class="sc-names">${names}</span>
+            <button class="sc-notify ${selected ? "selected" : ""}" onclick='toggleScheduleNotice(${JSON.stringify(definitionIds)})' aria-label="${selected ? "일정 알림 해제" : "일정 알림 설정"}" title="${selected ? "알림 해제" : "5분 전·시작 알림 설정"}">${selected ? "🔔" : "🔕"}</button>
             <span class="sc-time">${live ? "진행중" : kstTime(g.startAt)}</span></div>`;
     }).join("") || `<div class="info-msg">남은 일정이 없습니다.</div>`;
 
@@ -1039,6 +1154,10 @@ function renderSchedule() {
             <div id="sc-next-label" class="sc-next-label"></div>
             <div id="sc-remain" class="sc-remain"></div>
         </div>
+        <div class="sc-notice-bar">
+            <span class="sc-notice-text ${notificationStatus() === "granted" ? "enabled" : ""}">${notificationStatus() === "granted" ? "🔔 선택 일정: 5분 전 · 시작 알림" : "🔕 알림 권한이 필요합니다"}</span>
+            ${notificationStatus() === "granted" ? "" : '<button class="mini-btn" onclick="enableScheduleNotifications()">알림 허용</button>'}
+        </div>
         <div class="sc-filters">${chips}</div>
         ${rows}
         <div class="info-sub" style="margin-top:8px">출처: sagye.kr · KST · <span style="cursor:pointer;text-decoration:underline" onclick="delete infoCache.schedule; loadSchedule()">새로고침</span></div>`;
@@ -1049,6 +1168,7 @@ function tickClock() {
     const clock = $("sc-clock");
     if (!clock) return;
     const now = Date.now();
+    checkScheduleNotifications(now);
     clock.textContent = `현재 ${kstClockStr(now)}`;
     const { nextAt, nextName, expireAt } = scheduleState;
     if (nextAt) {

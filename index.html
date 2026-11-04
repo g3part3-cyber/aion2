@@ -948,7 +948,7 @@ function renderArtifact(pair) {
         <div style="text-align:center"><button class="mini-btn" onclick="delete infoCache.artifact; loadArtifact()">🔄 새로고침</button></div>`;
 }
 
-const scheduleState = { data: null, date: null, category: "main" };
+const scheduleState = { data: null, date: null, today: null, category: "main" };
 
 async function loadSchedule() {
     const body = $("schedule-body");
@@ -959,7 +959,7 @@ async function loadSchedule() {
         scheduleState.data = await cachedJson("schedule", "./schedule.json", false)
             .catch(() => cachedJson("schedule", SCHEDULE_URL, true));
         if (!scheduleState.data?.occurrences) throw new Error("invalid schedule");
-        if (!scheduleState.date) scheduleState.date = scheduleState.data.today;
+        syncScheduleToday();
         renderSchedule();
     } catch (e) {
         body.className = "info-msg err";
@@ -983,6 +983,13 @@ function setScheduleCategory(cat) {
 
 const kstDateStr = (ms) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(ms);
 const kstClockStr = (ms) => new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(ms);
+function syncScheduleToday() {
+    const today = kstDateStr(Date.now());
+    if (today === scheduleState.today) return false;
+    if (!scheduleState.date || scheduleState.date === scheduleState.today) scheduleState.date = today;
+    scheduleState.today = today;
+    return true;
+}
 const SCHEDULE_ICONS = { rift_portal: "🌀", kaira: "👹", agro: "🐲", artifact_occupation: "🏛", abyss_boss: "💀" };
 const SCHEDULE_DISPLAY = { artifact_occupation: "아티 점령전", abyss_boss: "어비스 보스" };
 const MAIN_CATEGORIES = ["boss", "rift", "abyss"];
@@ -1175,6 +1182,10 @@ function renderSchedule() {
 function tickClock() {
     const clock = $("sc-clock");
     if (!clock) return;
+    if (syncScheduleToday()) {
+        renderSchedule();
+        return;
+    }
     const now = Date.now();
     clock.textContent = `현재 ${kstClockStr(now)}`;
     const { nextAt, nextName, expireAt } = scheduleState;

@@ -1,0 +1,30 @@
+name: Update schedule.json
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-schedule
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch schedule (Kasaka 1015)
+        run: |
+          curl -fsS --retry 3 --max-time 30 "https://sagye.kr/api/schedule?server=1015" -o schedule.tmp
+          python3 -c "import json;d=json.load(open('schedule.tmp'));assert d['occurrences']"
+          mv schedule.tmp schedule.json
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add schedule.json
+          git diff --cached --quiet || (git commit -m "chore: update schedule.json" && git push)

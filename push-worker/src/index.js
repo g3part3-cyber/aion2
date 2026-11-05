@@ -3,6 +3,7 @@ import { buildPushPayload } from "@block65/webcrypto-web-push";
 const NOTICE_LEAD_MS = 5 * 60 * 1000;
 const SCHEDULE_CACHE_MS = 5 * 60 * 1000;
 const NOTICE_WINDOW_MS = 90 * 1000;
+const CRON_INTERVAL_MS = 60 * 1000;
 const FIRED_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 class ApiError extends Error {
@@ -80,20 +81,20 @@ async function handleApiRequest(request, env) {
     if (request.method === "POST") {
         const body = await readJson(request);
         const subscription = body.subscription;
-        const definitionIds = body.definitionIds;
+        const occurrenceIds = body.occurrenceIds;
         if (!validSubscription(subscription)) {
             return jsonResponse({ error: "올바른 푸시 구독 정보가 아닙니다." }, 400, origin);
         }
-        if (!Array.isArray(definitionIds)
-            || definitionIds.length > 100
-            || definitionIds.some((id) => typeof id !== "string" || !/^[a-z0-9_]{1,80}$/.test(id))) {
+        if (!Array.isArray(occurrenceIds)
+            || occurrenceIds.length > 300
+            || occurrenceIds.some((id) => typeof id !== "string" || !/^[A-Za-z0-9_@:+.\-]{1,120}$/.test(id))) {
             return jsonResponse({ error: "알림 일정 선택이 올바르지 않습니다." }, 400, origin);
         }
 
         const key = await subscriptionKey(subscription.endpoint);
         await env.PUSH_DATA.put(`sub:${key}`, JSON.stringify({
             subscription,
-            definitionIds: [...new Set(definitionIds)],
+            occurrenceIds: [...new Set(occurrenceIds)],
         }));
         return jsonResponse({ ok: true }, 200, origin);
     }
@@ -179,20 +180,24 @@ async function deliverDueNotifications(env, now) {
         privateKey: env.VAPID_PRIVATE_KEY,
     };
 
-    await Promise.all(subscriptions.map(async ({ key, subscription, definitionIds }) => {
-        if (!Array.isArray(definitionIds) || !definitionIds.length) return;
+    await Promise.all(subscriptions.map(async ({ key, subscription, occurrenceIds }) => {
+        if (!Array.isArray(occurrenceIds) || !occurrenceIds.length) return;
+        const selected = new Set(occurrenceIds);
 
         for (const occurrence of schedule.occurrences) {
-            if (occurrence.cancelled || !definitionIds.includes(occurrence.definitionId)) continue;
+            if (occurrence.cancelled || !selected.has(occurrence.occurrenceId)) continue;
             const notices = [
                 { at: occurrence.startAt - NOTICE_LEAD_MS, label: "5분 전" },
                 { at: occurrence.startAt, label: "시작" },
             ];
             for (const notice of notices) {
-                if (now < notice.at || now - notice.at > NOTICE_WINDOW_MS) continue;
+                if (notice.at - now >= CRON_INTERVAL_MS || now - notice.at > NOTICE_WINDOW_MS) continue;
 
                 const firedKey = `fired:${key}:${occurrence.occurrenceId}:${notice.label}`;
                 if (await env.PUSH_DATA.get(firedKey)) continue;
+                // cron 실행 시각이 정각이 아니므로, 다음 1분 안의 알림은 정확한 시각까지 기다렸다가 보냅니다.
+                const waitMs = notice.at - Date.now();
+                if (waitMs > 0) await new Promise((resolve) => setTimeout(resolve, waitMs));
                 const { title, body } = noticeText(occurrence, notice.label);
                 try {
                     const payload = await buildPushPayload({

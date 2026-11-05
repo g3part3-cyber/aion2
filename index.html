@@ -996,7 +996,7 @@ const SCHEDULE_ICONS = { rift_portal: "🌀", kaira: "👹", agro: "🐲", artif
 const SCHEDULE_DISPLAY = { artifact_occupation: "아티 점령전", abyss_boss: "어비스 보스" };
 const MAIN_CATEGORIES = ["boss", "rift", "abyss"];
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-const NOTICE_SELECTION_KEY = "aion2-schedule-notice-definitions";
+const NOTICE_SELECTION_KEY = "aion2-schedule-notice-occurrences";
 const NOTICE_LEAD_MS = 5 * 60 * 1000;
 const PUSH_API_URL = "https://aion2-push.g3part3-aion.workers.dev";
 let schedulePushSyncStatus = "idle";
@@ -1100,7 +1100,7 @@ async function syncSchedulePushSubscription(selections) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             subscription: subscription.toJSON(),
-            definitionIds: [...selections],
+            occurrenceIds: [...selections],
         }),
     });
     if (!response.ok) throw new Error(`푸시 구독 저장 실패 (HTTP ${response.status})`);
@@ -1126,15 +1126,19 @@ async function syncSavedSchedulePushSubscription() {
     renderSchedule();
 }
 
-async function toggleScheduleNotice(definitionIds) {
+async function toggleScheduleNotice(occurrenceId) {
     if (notificationStatus() !== "granted") {
         await enableScheduleNotifications();
         if (notificationStatus() !== "granted") return;
     }
 
     const selections = getNoticeSelections();
-    const allSelected = definitionIds.every((id) => selections.has(id));
-    definitionIds.forEach((id) => allSelected ? selections.delete(id) : selections.add(id));
+    if (selections.has(occurrenceId)) selections.delete(occurrenceId);
+    else selections.add(occurrenceId);
+    // 이미 지난 일정의 선택은 정리해 목록이 계속 커지지 않게 함
+    const upcoming = new Set(scheduleState.data.occurrences
+        .filter((o) => o.startAt > Date.now() - NOTICE_LEAD_MS).map((o) => o.occurrenceId));
+    for (const id of selections) if (!upcoming.has(id)) selections.delete(id);
     try {
         schedulePushSyncStatus = "syncing";
         await syncSchedulePushSubscription(selections);
@@ -1182,18 +1186,17 @@ function renderSchedule() {
     const rows = groups.map((g) => {
         const multi = g.items.length > 1;
         const cat = SCHEDULE_CATEGORIES[g.items[0].category] || { color: "#7f8c8d" };
-        const definitionIds = [...new Set(g.items.map((o) => o.definitionId))];
-        const selected = definitionIds.every((id) => selections.has(id));
         const names = g.items.map((o) => {
             const icon = SCHEDULE_ICONS[o.definitionId] || "";
             const end = o.endAt ? `<small class="sc-end">~${kstTime(o.endAt)}</small>` : "";
-            return `<span class="sc-ev">${icon} ${escHtml(SCHEDULE_DISPLAY[o.definitionId] || o.name)}${end}</span>`;
+            const selected = selections.has(o.occurrenceId);
+            const bell = `<button class="sc-notify ${selected ? "selected" : ""}" onclick='toggleScheduleNotice(${JSON.stringify(o.occurrenceId)})' aria-label="${selected ? "일정 알림 해제" : "일정 알림 설정"}" title="${selected ? "알림 해제" : "5분 전·시작 알림 설정"}">${selected ? "🔔" : "🔕"}</button>`;
+            return `<span class="sc-ev">${icon} ${escHtml(SCHEDULE_DISPLAY[o.definitionId] || o.name)}${end} ${bell}</span>`;
         }).join('<span class="sc-plus">+</span>');
         const isNext = g === nextGroup && isToday;
         const live = g.startAt <= now;
         return `<div class="sc-row ${isNext ? "next" : ""} ${live ? "live" : ""}" style="--c:${cat.color}">
             ${multi ? '<span class="sc-badge">동시</span>' : ""}<span class="sc-names">${names}</span>
-            <button class="sc-notify ${selected ? "selected" : ""}" onclick='toggleScheduleNotice(${JSON.stringify(definitionIds)})' aria-label="${selected ? "일정 알림 해제" : "일정 알림 설정"}" title="${selected ? "알림 해제" : "5분 전·시작 알림 설정"}">${selected ? "🔔" : "🔕"}</button>
             <span class="sc-time">${live ? "진행중" : kstTime(g.startAt)}</span></div>`;
     }).join("") || `<div class="info-msg">남은 일정이 없습니다.</div>`;
 

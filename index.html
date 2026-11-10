@@ -45,7 +45,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             font-family: 'Malgun Gothic', sans-serif;
         }
@@ -56,7 +56,9 @@
 
         #app-container {
             width: var(--app-width);
+            max-width: 100%;
             height: var(--app-height);
+            max-height: 100vh;
             background-color: var(--bg-dark);
             border: 2px solid var(--accent-gold);
             display: flex;
@@ -65,6 +67,14 @@
             position: relative;
             box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
             box-sizing: border-box; 
+        }
+
+        .modal-backdrop {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 90;
         }
 
         .tabs {
@@ -370,12 +380,12 @@
 <body>
 <div id="app-container">
     <div class="tabs" role="tablist">
-        <button id="btn-ludra"   class="tab-btn active" onclick="switchTab('ludra', 2700)" aria-selected="true">비탄의설원</button>
-        <button id="btn-chimsik" class="tab-btn"         onclick="switchTab('chimsik', 3500)" aria-selected="false">침식된</button>
-        <button id="btn-muspell" class="tab-btn"         onclick="switchTab('muspell', 4300)" aria-selected="false">무스펠</button>
-                <button id="btn-artifact" class="tab-btn"        onclick="switchTab('artifact')" aria-selected="false">아티팩트</button>
-                <button id="btn-schedule" class="tab-btn"        onclick="switchTab('schedule')" aria-selected="false">일일일정</button>
-            </div>
+        <button id="btn-ludra"    class="tab-btn active" onclick="switchTab('ludra')"    aria-selected="true">비탄의설원</button>
+        <button id="btn-chimsik"  class="tab-btn"        onclick="switchTab('chimsik')"  aria-selected="false">침식된</button>
+        <button id="btn-muspell"  class="tab-btn"        onclick="switchTab('muspell')"  aria-selected="false">무스펠</button>
+        <button id="btn-artifact" class="tab-btn"        onclick="switchTab('artifact')" aria-selected="false">아티팩트</button>
+        <button id="btn-schedule" class="tab-btn"        onclick="switchTab('schedule')" aria-selected="false">일일일정</button>
+    </div>
 
     <div id="main-area" class="main-content bg-ludra" role="region" aria-label="성역 정보 조회 영역">
         <h2 id="title">⚔ 비탄의설원</h2>
@@ -422,6 +432,9 @@
         <h2>📅 일일 스케줄</h2>
         <div id="schedule-body" class="info-msg">불러오는 중...</div>
     </div>
+
+    <!-- 모달 배경 오버레이 (바깥 클릭 닫기용) -->
+    <div id="modal-backdrop" class="modal-backdrop" onclick="closeAllModals()"></div>
 
     <!-- 달력 모달 -->
     <div id="cal-modal" role="dialog" aria-label="날짜 선택">
@@ -572,7 +585,7 @@ function syncTabUi(type) {
     }
 }
 
-function switchTab(type, lv) {
+function switchTab(type) {
     if (state.currentTab === type) return;
 
     state.currentTab = type;
@@ -658,11 +671,11 @@ async function fetchData() {
             const titleText = typeof successTitleFn === "function" ? successTitleFn() : successTitleFn;
 
             resDiv.innerText =
-                `${titleText}\n\n캐릭터: ${user[0]}\n레벨: ${user[5]}\n전투력: ${displayPower}`;
+                `${titleText}\n\n캐릭터: ${user[0]}\n아이템 레벨: ${user[5]}\n전투력: ${displayPower}`;
         } else {
             state.selectedChar = null;
             resDiv.style.color = "#ff4d4d";
-            resDiv.innerText   = `❌ 입장 레벨 부족 ❌\n최소 ${requiredLv}레벨 필요\n(현재 레벨: ${user[5]})`;
+            resDiv.innerText   = `❌ 입장 레벨 부족 ❌\n최소 Lv ${requiredLv}↑ 필요\n(현재 아이템 레벨: ${user[5]})`;
         }
 
     } catch (e) {
@@ -728,13 +741,27 @@ function formatDate(d) {
 const calModal   = $("cal-modal");
 const calBody    = $("cal-body");
 const calTitleEl = $("cal-title");
+const backdropEl = $("modal-backdrop");
+
+function closeAllModals() {
+    calModal.style.display = "none";
+    calBody.innerHTML = "";
+    $("participants-modal").style.display = "none";
+    if (backdropEl) backdropEl.style.display = "none";
+}
 
 function toggleCal() {
     const isShowing = calModal.style.display === "block";
-    calModal.style.display = isShowing ? "none" : "block";
+    if (isShowing) {
+        closeAllModals();
+        return;
+    }
 
-    if (!isShowing) renderCal();
-    else calBody.innerHTML = "";
+    closeAllModals();
+    calModal.style.display = "block";
+    if (backdropEl) backdropEl.style.display = "block";
+    state.viewDate = new Date(state.targetDate);
+    renderCal();
 }
 
 function renderCal() {
@@ -773,6 +800,7 @@ function renderCal() {
 }
 
 function moveMonth(n) {
+    state.viewDate.setDate(1);
     state.viewDate.setMonth(state.viewDate.getMonth() + n);
     renderCal();
 }
@@ -788,9 +816,11 @@ function toggleParticipantsModal() {
     const isShowing = pModal.style.display === "block";
     
     if (isShowing) {
-        pModal.style.display = "none";
+        closeAllModals();
     } else {
+        closeAllModals();
         pModal.style.display = "block";
+        if (backdropEl) backdropEl.style.display = "block";
         // 상단 타이틀을 현재 활성화된 탭 이름으로 변경
         $("p-modal-title").innerText = `📋 ${CONFIG.tabTitles[state.currentTab]} 명단`;
         fetchWeeklyParticipants();
@@ -968,10 +998,26 @@ async function loadSchedule() {
 }
 
 function shiftScheduleDate(delta) {
+    if (!scheduleState.data?.occurrences) return;
     const dates = [...new Set(scheduleState.data.occurrences.map((o) => o.date))].sort();
-    const idx = dates.indexOf(scheduleState.date) + delta;
-    if (idx >= 0 && idx < dates.length) {
-        scheduleState.date = dates[idx];
+    if (!dates.length) return;
+
+    let idx = dates.indexOf(scheduleState.date);
+    if (idx === -1) {
+        if (delta > 0) {
+            const nextDates = dates.filter((d) => d > scheduleState.date);
+            scheduleState.date = nextDates.length > 0 ? nextDates[0] : dates[0];
+        } else {
+            const prevDates = dates.filter((d) => d < scheduleState.date);
+            scheduleState.date = prevDates.length > 0 ? prevDates[prevDates.length - 1] : dates[dates.length - 1];
+        }
+        renderSchedule();
+        return;
+    }
+
+    const nextIdx = idx + delta;
+    if (nextIdx >= 0 && nextIdx < dates.length) {
+        scheduleState.date = dates[nextIdx];
         renderSchedule();
     }
 }
@@ -1103,7 +1149,10 @@ async function syncSchedulePushSubscription(selections) {
             occurrenceIds: [...selections],
         }),
     });
-    if (!response.ok) throw new Error(`푸시 구독 저장 실패 (HTTP ${response.status})`);
+    if (!response.ok) {
+        const detail = await response.json().then((body) => body.error, () => "");
+        throw new Error(`푸시 구독 저장 실패 (HTTP ${response.status})${detail ? `: ${detail}` : ""}`);
+    }
 }
 
 async function syncSavedSchedulePushSubscription() {
@@ -1170,12 +1219,14 @@ function renderSchedule() {
         if (last && last.startAt === o.startAt) last.items.push(o);
         else groups.push({ startAt: o.startAt, items: [o] });
     }
+    const liveGroup = groups.find((g) => g.startAt <= now);
     const nextGroup = groups.find((g) => g.startAt > now);
     scheduleState.expireAt = isToday
         ? Math.min(...items.map((o) => (o.endAt && o.endAt > now ? o.endAt : o.startAt)).filter((t) => t > now), Infinity)
         : Infinity;
     scheduleState.nextAt = nextGroup && isToday ? nextGroup.startAt : null;
     scheduleState.nextName = nextGroup ? nextGroup.items.map((o) => SCHEDULE_DISPLAY[o.definitionId] || o.name).join(" + ") : "";
+    scheduleState.liveGroup = liveGroup && isToday ? liveGroup : null;
 
     const wd = WEEKDAYS[new Date(date + "T00:00:00Z").getUTCDay()];
     const chips = [["main", "주요"], ["all", "전체"], ...Object.entries(SCHEDULE_CATEGORIES).map(([k, v]) => [k, v.label])]
@@ -1236,12 +1287,24 @@ function tickClock() {
     }
     const now = Date.now();
     clock.textContent = `현재 ${kstClockStr(now)}`;
-    const { nextAt, nextName, expireAt } = scheduleState;
+    const { nextAt, nextName, liveGroup, expireAt } = scheduleState;
     if (nextAt) {
         const s = Math.max(0, Math.floor((nextAt - now) / 1000));
         const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
         $("sc-next-label").textContent = `${kstTime(nextAt)} ${nextName}까지`;
         $("sc-remain").innerHTML = (h ? `${h}<small>시간</small> ` : "") + `${m}<small>분</small> ${String(sec).padStart(2, "0")}<small>초</small>`;
+    } else if (liveGroup) {
+        const liveName = liveGroup.items.map((o) => SCHEDULE_DISPLAY[o.definitionId] || o.name).join(" + ");
+        const maxEnd = Math.max(...liveGroup.items.map((o) => o.endAt || 0));
+        if (maxEnd > now) {
+            const s = Math.max(0, Math.floor((maxEnd - now) / 1000));
+            const m = Math.floor(s / 60), sec = s % 60;
+            $("sc-next-label").textContent = `[진행중] ${liveName} 종료까지`;
+            $("sc-remain").innerHTML = `${m}<small>분</small> ${String(sec).padStart(2, "0")}<small>초</small>`;
+        } else {
+            $("sc-next-label").textContent = `[진행중] ${liveName}`;
+            $("sc-remain").textContent = "";
+        }
     } else {
         $("sc-next-label").textContent = scheduleState.date === kstDateStr(now) ? "오늘 남은 일정 없음" : "";
         $("sc-remain").textContent = "";

@@ -1,10 +1,8 @@
-const CACHE_NAME = "aion2-shell-v6";
+const CACHE_NAME = "aion2-shell-v7";
 const APP_SHELL = [
     "./",
     "./index.html",
-    "./schedule.json",
     "./manifest.webmanifest",
-    "./service-worker.js",
     "./icons/app-icon.svg",
     "./icons/app-icon-180.png",
     "./icons/app-icon-192.png",
@@ -41,10 +39,45 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
     if (event.request.method !== "GET") return;
 
+    const url = new URL(event.request.url);
+
+    // 1. schedule.json 은 수시로 갱신되는 동적 데이터이므로 Network First (네트워크 우선, 오프라인 시 캐시)
+    if (url.pathname.endsWith("/schedule.json")) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response && response.ok) {
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // 2. HTML 문서/네비게이션 요청은 최신 배포 반영을 위해 Network First
+    if (event.request.mode === "navigate" || url.pathname.endsWith("/index.html") || url.pathname.endsWith("/")) {
+        event.respondWith(
+            fetch(event.request)
+                .then((response) => {
+                    if (response && response.ok) {
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match("./index.html"))
+        );
+        return;
+    }
+
+    // 3. 정적 에셋(이미지, 아이콘 등)은 Cache First
     event.respondWith(
         caches.match(event.request).then((cached) => cached || fetch(event.request)
             .then((response) => {
-                if (!response || !response.ok || new URL(event.request.url).origin !== self.location.origin) {
+                if (!response || !response.ok || url.origin !== self.location.origin) {
                     return response;
                 }
                 const copy = response.clone();
